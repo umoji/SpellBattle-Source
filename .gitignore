@@ -1,0 +1,6 @@
+/Library/
+/Temp/
+/obj/
+/UserSettings/
+*.log
+*.meta.orig

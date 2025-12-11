@@ -1,0 +1,50 @@
+ID,Rarity,EnemyName,Attribute,MaxHP,AttackPower,PatternID,Cost,EffectType,Power,AssetPath,EffectText
+1,R,Redcap,Fire,60,10,1,1,DamageTarget,63,ETNR_001,Deal 63 damage to the enemy.
+2,R,Mermaid,Water,70,10,1,1,DamageTarget,66,ETNR_002,Deal 66 damage to the enemy.
+3,R,Dwarf Warrior,Earth,80,10,1,1,DamageTarget,69,ETNR_003,Deal 69 damage to the enemy.
+4,R,Harpie,Wind,90,11,1,1,DamageTarget,72,ETNR_004,Deal 72 damage to the enemy.
+5,R,Kobold,Thunder,100,11,1,1,DamageTarget,75,ETNR_005,Deal 75 damage to the enemy.
+6,R,Pixie,Light,110,11,1,1,DamageTarget,78,ETNR_006,Deal 78 damage to the enemy.
+7,R,Imp,Dark,120,11,1,1,DamageTarget,81,ETNR_007,Deal 81 damage to the enemy.
+8,R,Gnoll,Fire,130,12,1,1,DamageTarget,84,ETNR_008,Deal 84 damage to the enemy.
+9,R,Sahuagin,Water,140,12,1,1,DamageTarget,87,ETNR_009,Deal 87 damage to the enemy.
+10,R,Troll,Earth,150,12,1,1,DamageTarget,90,ETNR_010,Deal 90 damage to the enemy.
+11,R,Ghoul,Wind,160,12,1,1,DamageTarget,93,ETNR_011,Deal 93 damage to the enemy.
+12,R,Strix,Thunder,170,13,1,1,DamageTarget,96,ETNR_012,Deal 96 damage to the enemy.
+13,R,Dryad,Light,180,13,1,1,DamageTarget,99,ETNR_013,Deal 99 damage to the enemy.
+14,R,Vampire Spawn,Dark,190,13,1,1,DamageTarget,102,ETNR_014,Deal 102 damage to the enemy.
+15,R,Ogre,Fire,200,13,1,1,DamageTarget,105,ETNR_015,Deal 105 damage to the enemy.
+16,R,Naga,Water,210,14,1,1,DamageTarget,108,ETNR_016,Deal 108 damage to the enemy.
+17,R,Fomorian,Earth,220,14,1,1,DamageTarget,111,ETNR_017,Deal 111 damage to the enemy.
+18,R,Will-o'-wisp,Wind,230,14,1,1,DamageTarget,114,ETNR_018,Deal 114 damage to the enemy.
+19,R,Wight,Thunder,240,14,1,1,DamageTarget,117,ETNR_019,Deal 117 damage to the enemy.
+20,R,Fairy,Light,250,15,1,1,DamageTarget,120,ETNR_020,Deal 120 damage to the enemy.
+21,R,Specter,Dark,260,15,1,1,DamageTarget,123,ETNR_021,Deal 123 damage to the enemy.
+22,R,Hellhound,Fire,270,15,1,1,DamageTarget,126,ETNR_022,Deal 126 damage to the enemy.
+23,R,Siren,Water,280,15,1,1,DamageTarget,129,ETNR_023,Deal 129 damage to the enemy.
+24,R,Duergar,Earth,290,16,1,1,DamageTarget,132,ETNR_024,Deal 132 damage to the enemy.
+25,R,Harpy Eagle,Wind,300,16,1,1,DamageTarget,135,ETNR_025,Deal 135 damage to the enemy.
+26,R,Lich,Thunder,310,16,1,1,DamageTarget,138,ETNR_026,Deal 138 damage to the enemy.
+27,R,Unicorn,Light,320,16,1,1,DamageTarget,141,ETNR_027,Deal 141 damage to the enemy.
+28,R,Shadow Fiend,Dark,330,17,1,1,DamageTarget,144,ETNR_028,Deal 144 damage to the enemy.
+29,SR,Kerberos,Fire,340,17,2,3,ApplyStatusToEnemy,3,ETNR_029,Apply 3 turns of Poison.
+30,SR,Minotaur,Earth,350,17,2,3,ApplyStatusToEnemy,3,ETNR_030,Apply 3 turns of Poison.
+31,SR,Shiva,Water,360,17,2,3,ApplyStatusToEnemy,3,ETNR_031,Apply 3 turns of Poison.
+32,SR,Gryphon,Wind,370,18,2,3,ApplyStatusToEnemy,3,ETNR_032,Apply 3 turns of Poison.
+33,SR,Gargoyle,Dark,380,18,2,3,ApplyStatusToEnemy,3,ETNR_033,Apply 3 turns of Poison.
+34,SR,Manticore,Fire,390,18,2,3,ApplyStatusToEnemy,3,ETNR_034,Apply 3 turns of Poison.
+35,SR,Valkyrie,Light,400,18,2,3,ApplyStatusToEnemy,3,ETNR_035,Apply 3 turns of Poison.
+36,SR,Daemon,Dark,410,19,2,3,ApplyStatusToEnemy,3,ETNR_036,Apply 3 turns of Poison.
+37,SR,Cyclops,Earth,420,19,2,3,ApplyStatusToEnemy,3,ETNR_037,Apply 3 turns of Poison.
+38,SR,Golem,Earth,430,19,2,3,ApplyStatusToEnemy,3,ETNR_038,Apply 3 turns of Poison.
+39,SR,Cait Sith,Light,440,19,2,3,ApplyStatusToEnemy,3,ETNR_039,Apply 3 turns of Poison.
+40,SR,Wyvern,Wind,450,20,2,3,ApplyStatusToEnemy,3,ETNR_040,Apply 3 turns of Poison.
+41,SR,Behemoth,Earth,460,20,2,3,ApplyStatusToEnemy,3,ETNR_041,Apply 3 turns of Poison.
+42,SR,Kraken,Water,470,20,2,3,ApplyStatusToEnemy,3,ETNR_042,Apply 3 turns of Poison.
+43,SSR,Bahamut,Earth,480,20,2,4,ApplyStatusToEnemy,5,ETNR_043,Apply 5 turns of Vulnerable.
+44,SSR,Leviathan,Water,490,21,2,4,ApplyStatusToEnemy,5,ETNR_044,Apply 5 turns of Vulnerable.
+45,SSR,Ifrit,Fire,500,21,2,4,ApplyStatusToEnemy,5,ETNR_045,Apply 5 turns of Vulnerable.
+46,SSR,Odin,Thunder,510,21,2,4,ApplyStatusToEnemy,5,ETNR_046,Apply 5 turns of Vulnerable.
+47,SSR,Zeus,Thunder,520,21,2,4,ApplyStatusToEnemy,5,ETNR_047,Apply 5 turns of Vulnerable.
+48,SSR,Asmodeus,Dark,530,22,2,4,ApplyStatusToEnemy,5,ETNR_048,Apply 5 turns of Vulnerable.
+49,SSR,Fenrir,Wind,540,22,2,4,ApplyStatusToEnemy,5,ETNR_049,Apply 5 turns of Vulnerable.
