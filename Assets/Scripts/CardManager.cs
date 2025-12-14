@@ -30,13 +30,42 @@ public class CardManager : MonoBehaviour
 
     // CSVファイル名：「EnemyData.csv」を参照
     private const string CARD_CSV_FILE_NAME = "EnemyData"; 
-
+    
+    [Header("ガチャ排出設定")]
+    [Range(0f, 100f)] public float SSR_RATE = 5.0f;  // 5%
+    [Range(0f, 100f)] public float SR_RATE = 20.0f; // 20%
+    [Range(0f, 100f)] public float R_RATE = 30.0f;  // 30%
+    
     void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject); 
+            
+            // データのロード
+            LoadStaticCardDataFromCSV();
+            
+            // 初期デッキIDリストが空であれば、デフォルトを設定 (ID 1-20)
+            if (initialDeckIDs.Count == 0 && allCards.Count >= 20)
+            {
+                 SetInitialDeckDefault();
+            }
+            
+            // 所持カード数リストをロード
+            LoadOwnedCardCountsFromList();
+
+            // ★修正点★: 初回起動時の「所持カード」初期化ロジックを削除/コメントアウト
+            // 初期デッキを所持カードとして設定する処理は、今回は行いません。
+            /*
+            if (_ownedCardCountsCache.Count == 0)
+            {
+                InitializeOwnedCards();
+            }
+            */
+
+            // マスターデッキを構築するロジックは実行
+            BuildMainDeckFromInitial();
         }
         else
         {
@@ -44,193 +73,102 @@ public class CardManager : MonoBehaviour
         }
     }
     
-    void Start()
+    // --- 初期化処理 (未使用にするが、定義は残す) ---
+    private void InitializeOwnedCards()
     {
-        // 起動時に全データと初期デッキをロード/再構築
-        LoadAllGameData();
-        
-        LoadOwnedCardCountsFromList(); 
-        
-        Debug.Log($"CardManager initialized. Total cards: {allCards.Count}. Deck Count: {mainDeckCardIDs.Count}");
+        // 今回はゲーム開始時にコレクションを0にするため、このメソッドはAwake()から呼ばない
+        foreach (int cardID in initialDeckIDs)
+        {
+            if (_ownedCardCountsCache.ContainsKey(cardID))
+            {
+                _ownedCardCountsCache[cardID]++;
+            }
+            else
+            {
+                _ownedCardCountsCache.Add(cardID, 1);
+            }
+        }
+        SaveOwnedCardCountsToList();
+        Debug.LogWarning("Owned cards initialized from initialDeckIDs. (This should only run if explicitly needed)");
     }
+
+    // --- 所持カード数リストのロード/セーブ ---
     
     private void LoadOwnedCardCountsFromList()
     {
         _ownedCardCountsCache.Clear();
         foreach (var entry in ownedCardsList)
         {
-            _ownedCardCountsCache.Add(entry.CardID, entry.Count); 
+            // 既存のデータがあれば上書き
+            _ownedCardCountsCache[entry.cardID] = entry.count;
         }
     }
-
+    
     private void SaveOwnedCardCountsToList()
     {
         ownedCardsList.Clear();
         foreach (var kvp in _ownedCardCountsCache)
         {
-            ownedCardsList.Add(new CardCountEntry { CardID = kvp.Key, Count = kvp.Value });
+            ownedCardsList.Add(new CardCountEntry { cardID = kvp.Key, count = kvp.Value });
         }
+    }
+
+    // --- メインデッキ管理 ---
+
+    public void SetMainDeck(List<int> newDeckIDs)
+    {
+        mainDeckCardIDs = newDeckIDs;
+    }
+
+    public List<int> GetMainDeck()
+    {
+        return mainDeckCardIDs;
     }
     
-    /// <summary>
-    /// 全てのデータ（静的データとデッキ構成）をロード/再ロードします。
-    /// </summary>
-    public void LoadAllGameData()
+    public int GetMainDeckCount()
     {
-        // 1. ライブデータ（バトル中のデータ）のみクリア (CleanupDataで対応)
-        // ※ ここでは mainDeckCardIDs.Clear() は呼ばない
-
-        // 2. 静的データ（CSV）がまだロードされていない場合のみロード
-        if (allCards.Count == 0)
-        {
-            LoadStaticCardDataFromCSV();
-        }
-        
-        // 3. 初期デッキをまだ設定していない場合は設定（ID 1-20を記憶）
-        if (initialDeckIDs.Count == 0 && allCards.Count >= 20)
-        {
-             SetInitialDeckDefault();
-        } 
-        
-        // 4. 記憶された初期デッキから、バトル用のメインデッキを構築
-        BuildMainDeckFromInitial();
-        
-        // 5. 所持カードカウントの初期化も行う
-        LoadOwnedCardCountsFromCSV();
-        
-        Debug.Log($"CardManager data successfully reloaded. Total cards loaded: {allCards.Count}. Deck size: {mainDeckCardIDs.Count}");
+        return mainDeckCardIDs.Count;
     }
     
-    /// <summary>
-    /// CSVファイルから静的カードデータのみをロードし、allCardsに格納します。
-    /// </summary>
-    private void LoadStaticCardDataFromCSV()
+    public bool AddCardToMainDeck(int cardID)
     {
-        allCards.Clear();
-        
-        TextAsset csvFile = Resources.Load<TextAsset>(CARD_CSV_FILE_NAME);
-
-        if (csvFile == null)
+        // 所持数チェック: コレクションにカードがないとデッキに入れられない
+        if (GetCardCount(cardID) <= GetMainDeckCardCountInDeck(cardID))
         {
-            Debug.LogError($"CRITICAL: CSVファイルが見つかりません: Resources/{CARD_CSV_FILE_NAME}.txt。データロード失敗。");
-            return;
+            Debug.LogWarning($"Cannot add CardID {cardID}. Max owned count reached.");
+            return false;
         }
 
-        string[] lines = csvFile.text.Split('\n');
-        int loadedCount = 0; 
-        
-        foreach (string line in lines.Skip(1))
+        // デッキサイズ制限チェック
+        if (mainDeckCardIDs.Count >= deckSizeLimit)
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            string[] fields = Regex.Split(line, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-            
-            if (fields.Length < 12) continue;
-
-            if (int.TryParse(fields[0].Trim(), out int id) && 
-                System.Enum.TryParse<ElementType>(fields[3].Trim(), true, out ElementType attribute) &&
-                System.Enum.TryParse<CardRarity>(fields[1].Trim(), true, out CardRarity rarity) &&
-                System.Enum.TryParse<EffectType>(fields[8].Trim(), true, out EffectType effectType) && 
-                int.TryParse(fields[7].Trim(), out int cost) &&
-                int.TryParse(fields[9].Trim(), out int power))
-            {
-                CardData card = new CardData
-                {
-                    CardID = id,
-                    Rarity = rarity,
-                    CardName = fields[2].Trim(), 
-                    Attribute = attribute,
-                    Cost = cost,
-                    EffectType = effectType,
-                    Power = power,
-                    EffectText = fields[11].Trim(),
-                    visualAssetPath = fields[10].Trim() 
-                };
-                
-                allCards.Add(card);
-                loadedCount++;
-            }
-            else
-            {
-                Debug.LogWarning($"CardManager: Skipping CSV row due to parsing failure in line: {line}"); 
-            }
+            Debug.LogWarning("Deck size limit reached.");
+            return false;
         }
-        
-        Debug.Log($"CardManager: Successfully finished parsing. Loaded {loadedCount} card entries from {CARD_CSV_FILE_NAME}."); 
+
+        mainDeckCardIDs.Add(cardID);
+        return true;
+    }
+
+    public bool RemoveCardFromMainDeck(int cardID)
+    {
+        bool removed = mainDeckCardIDs.Remove(cardID);
+        if (removed)
+        {
+            // mainDeckCardIDs.Remove(cardID) は最初に見つかったものだけを削除します
+        }
+        return removed;
     }
     
-    /// <summary>
-    /// ID 1からID 20を初期デッキのマスターとして設定します。
-    /// </summary>
-    private void SetInitialDeckDefault()
+    // デッキ内の特定のカードの現在の枚数を取得
+    public int GetMainDeckCardCountInDeck(int cardID)
     {
-        initialDeckIDs.Clear();
-        Debug.Log("CardManager: Setting default initial deck (ID 1-20).");
-        
-        for (int i = 1; i <= Math.Min(20, allCards.Count); i++)
-        {
-            initialDeckIDs.Add(allCards.FirstOrDefault(c => c.CardID == i)?.CardID ?? i);
-        }
-    }
-
-    /// <summary>
-    /// 記憶された初期デッキIDをメインデッキにコピーします。
-    /// </summary>
-    private void BuildMainDeckFromInitial()
-    {
-        mainDeckCardIDs.Clear();
-
-        if (initialDeckIDs.Count > 0)
-        {
-            mainDeckCardIDs.AddRange(initialDeckIDs);
-            Debug.Log($"Main deck rebuilt from initial deck. Size: {mainDeckCardIDs.Count}");
-        } else {
-             Debug.LogError("FATAL: Initial deck is empty. Cannot build main deck.");
-        }
-    }
-
-    /// <summary>
-    /// 所持カードカウントのロードロジック（通常はセーブデータからロード）
-    /// </summary>
-	private void LoadOwnedCardCountsFromCSV()
-	{
-		 _ownedCardCountsCache.Clear();
-		 
-		 // ID 1からID 49までの全カードを対象としていましたが、これを限定します。
-		 
-		 const int START_ID = 21;
-		 const int END_ID = 25;
-
-		 // 【★修正点★】ID 21から 25 のカードのみを1枚所持として初期設定する
-		 foreach (var card in allCards)
-		 {
-			 if (card.CardID >= START_ID && card.CardID <= END_ID)
-			 {
-				 if (!_ownedCardCountsCache.ContainsKey(card.CardID))
-				 {
-					 _ownedCardCountsCache.Add(card.CardID, 1); 
-				 }
-			 }
-			 // それ以外のカードは、所持数0のまま（またはキャッシュに追加しない）
-		 }
-		 SaveOwnedCardCountsToList();
-	}
-
-    /// <summary>
-    /// バトル終了時にライブデータ（キャッシュ）のみをクリアします。
-    /// 【修正済み】所持カードキャッシュは永続データのため、クリアしません。
-    /// </summary>
-    public void CleanupData()
-    {
-        // CardManagerが保持すべきデータ（マスターデッキ、所持カード数）はクリアしない。
-        Debug.Log("CardManager retains all static and persistent data.");
+        return mainDeckCardIDs.Count(id => id == cardID);
     }
     
-    // --- ゲッターとヘルパー ---
+    // --- 所持カード数管理 ---
     
-    /// <summary>
-    /// 指定したIDのカードの所持数を指定量だけ増減させます。
-    /// 【★新規追加メソッド★】
-    /// </summary>
+    // 所持カード数の増減
     public void ChangeCardCount(int cardID, int amount)
     {
         if (_ownedCardCountsCache.ContainsKey(cardID))
@@ -281,15 +219,187 @@ public class CardManager : MonoBehaviour
         return 0;
     }
     
-    public int GetMainDeckCount()
+    // 所持しているカードIDと枚数の辞書を取得
+    public Dictionary<int, int> GetAllOwnedCardCounts()
     {
-        return mainDeckCardIDs.Count;
+        return _ownedCardCountsCache;
     }
 
-    [Serializable]
-    public class CardCountEntry
+    // --- データクリーンアップ（シーン切り替え時などに使用） ---
+    public void CleanupData()
     {
-        public int CardID; 
-        public int Count;  
+        // mainDeckCardIDs はマスターデッキとして保護するためクリアしない
+        
+        Debug.Log("CardManager cleanup complete. Master Deck and Owned Cards preserved.");
     }
+    
+    // ------------------------------------------------------------------
+    // ★★★ データロード/構築ロジック ★★★
+    // ------------------------------------------------------------------
+    
+    /// <summary>
+    /// CSVファイルから静的カードデータのみをロードし、allCardsに格納します。
+    /// </summary>
+    private void LoadStaticCardDataFromCSV()
+    {
+        allCards.Clear();
+        
+        TextAsset csvFile = Resources.Load<TextAsset>(CARD_CSV_FILE_NAME);
+
+        if (csvFile == null)
+        {
+            Debug.LogError($"CRITICAL: CSVファイルが見つかりません: Resources/{CARD_CSV_FILE_NAME}.txt。データロード失敗。");
+            return;
+        }
+
+        string[] lines = csvFile.text.Split('\n');
+        int loadedCount = 0; 
+        
+        foreach (string line in lines.Skip(1))
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            // 正規表現で CSV を安全に分割
+            string[] fields = Regex.Split(line, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+            
+            if (fields.Length < 12) continue;
+
+            // fields[1] Rarity, fields[3] Attribute, fields[7] Cost, fields[8] EffectType, fields[9] Power
+            if (int.TryParse(fields[0].Trim(), out int id) && 
+                System.Enum.TryParse<ElementType>(fields[3].Trim(), true, out ElementType attribute) &&
+                System.Enum.TryParse<CardRarity>(fields[1].Trim(), true, out CardRarity rarity) && // Rarity
+                System.Enum.TryParse<EffectType>(fields[8].Trim(), true, out EffectType effectType) && 
+                int.TryParse(fields[7].Trim(), out int cost) &&
+                int.TryParse(fields[9].Trim(), out int power))
+            {
+                CardData card = new CardData
+                {
+                    CardID = id,
+                    Rarity = rarity,
+                    CardName = fields[2].Trim(), 
+                    Attribute = attribute,
+                    Cost = cost,
+                    EffectType = effectType,
+                    Power = power,
+                    EffectText = fields[11].Trim(),
+                    visualAssetPath = fields[10].Trim() 
+                };
+                
+                allCards.Add(card);
+                loadedCount++;
+            }
+            else
+            {
+                Debug.LogWarning($"CardManager: Skipping CSV row due to parsing failure in line: {line}"); 
+            }
+        }
+        
+        Debug.Log($"CardManager: Successfully finished parsing. Loaded {loadedCount} card entries from {CARD_CSV_FILE_NAME}."); 
+    }
+    
+    /// <summary>
+    /// ID 1からID 20を初期デッキのマスターとして設定します。
+    /// </summary>
+    private void SetInitialDeckDefault()
+    {
+        initialDeckIDs.Clear();
+        Debug.Log("CardManager: Setting default initial deck (ID 1-20).");
+        
+        for (int i = 1; i <= 20; i++)
+        {
+            CardData card = allCards.FirstOrDefault(c => c.CardID == i);
+            if (card != null)
+            {
+                initialDeckIDs.Add(card.CardID);
+            }
+            else
+            {
+                Debug.LogWarning($"Card ID {i} not found in static data. Skipping.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 記憶された初期デッキIDをメインデッキにコピーします。
+    /// </summary>
+    private void BuildMainDeckFromInitial()
+    {
+        mainDeckCardIDs.Clear();
+
+        if (initialDeckIDs.Count > 0)
+        {
+            mainDeckCardIDs.AddRange(initialDeckIDs);
+            Debug.Log($"Main deck rebuilt from initial deck. Size: {mainDeckCardIDs.Count}");
+        } else {
+             Debug.LogError("FATAL: Initial deck is empty. Cannot build main deck.");
+        }
+    }
+    
+    // ------------------------------------------------------------------
+    // ★★★ ガチャ機能 ロジック ★★★
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// 指定されたレアリティの全カードデータをリストで返します。
+    /// </summary>
+    public List<CardData> GetCardsByRarity(CardRarity rarity)
+    {
+        return allCards.Where(c => c.Rarity == rarity).ToList();
+    }
+
+    /// <summary>
+    /// 1回ガチャを引き、排出されたカードデータを返します。
+    /// </summary>
+    public CardData DrawGacha()
+    {
+        float roll = UnityEngine.Random.Range(0f, 100f);
+        CardRarity drawnRarity;
+
+        // 累積確率でレアリティを決定
+        if (roll < SSR_RATE)
+        {
+            drawnRarity = CardRarity.SSR;
+        }
+        else if (roll < (SSR_RATE + SR_RATE))
+        {
+            drawnRarity = CardRarity.SR;
+        }
+        else
+        {
+            // 残り全てを R (Rare) とする
+            drawnRarity = CardRarity.R;
+        }
+
+        List<CardData> rarityPool = GetCardsByRarity(drawnRarity);
+
+        if (rarityPool.Count == 0)
+        {
+            // Rarity R にフォールバック
+            Debug.LogError($"Gacha error: No cards found for rarity {drawnRarity}. Defaulting to R.");
+            rarityPool = GetCardsByRarity(CardRarity.R);
+            
+            if (rarityPool.Count == 0)
+            {
+                Debug.LogError("FATAL: Rarity R cards are also missing. Cannot draw.");
+                return null; 
+            }
+        }
+        
+        int index = UnityEngine.Random.Range(0, rarityPool.Count);
+        CardData drawnCard = rarityPool[index];
+        
+        // 取得したカードを所持リストに追加 (コレクションに反映)
+        ChangeCardCount(drawnCard.CardID, 1); 
+
+        Debug.Log($"Gacha Draw: Rarity {drawnRarity}, Card: {drawnCard.CardName}");
+        
+        return drawnCard;
+    }
+    
+}
+
+[Serializable]
+public class CardCountEntry
+{
+    public int cardID;
+    public int count;
 }

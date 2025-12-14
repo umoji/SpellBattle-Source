@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Linq; // Enumerable.Count() を使うために必要
 
 public class InventoryUIController : MonoBehaviour
 {
@@ -14,6 +15,8 @@ public class InventoryUIController : MonoBehaviour
     public TextMeshProUGUI deckCountText;
     public Button toBattleButton;
 
+    // ★修正点★: Gacha References は HomeUIController に移動したため削除
+    
     void Start()
     {
         if (CardManager.Instance == null)
@@ -22,16 +25,18 @@ public class InventoryUIController : MonoBehaviour
             return;
         }
 
-        // 1. コレクションのカードを表示
+        // 1. コレクションのカードを表示 (HomeSceneでガチャを引いた結果がCardManagerに反映済み)
         DisplayAllCards();
 
-        // 2. デッキのカードを表示 ★DeckListPanelの表示を担当★
+        // 2. デッキのカードを表示
         DisplayDeckCards(); 
         
         // 3. デッキカウントUIを更新
         UpdateDeckCountUI(); 
+        
+        // ★修正点★: ガチャ関連の初期設定や結果表示ロジックは全て削除
     }
-
+    
     // -------------------------------------------------------------------
     // カードリスト (コレクション) の表示
     // -------------------------------------------------------------------
@@ -44,31 +49,31 @@ public class InventoryUIController : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        List<int> ownedCardIDs = new List<int>();
-        
-        // 所持しているすべてのカードIDを取得 (ID 1〜49を所持と仮定)
-        for (int i = 1; i <= 49; i++) 
+        // 所持しているすべてのカードIDと枚数を取得
+        Dictionary<int, int> ownedCardCounts = CardManager.Instance.GetAllOwnedCardCounts();
+
+        foreach (var kvp in ownedCardCounts)
         {
-            if (CardManager.Instance.GetCardCount(i) > 0)
+            // 所持枚数が0より大きいカードのみ表示
+            if (kvp.Value > 0)
             {
-                ownedCardIDs.Add(i);
-            }
-        }
+                int cardID = kvp.Key;
+                // int count = kvp.Value; // 所持枚数表示用
 
-        foreach (int cardID in ownedCardIDs)
-        {
-            CardData cardData = CardManager.Instance.GetCardDataByID(cardID);
+                CardData cardData = CardManager.Instance.GetCardDataByID(cardID);
 
-            if (cardData != null)
-            {
-                GameObject cardObject = Instantiate(cardUIPrefab, cardListContent);
-                CardUI cardUI = cardObject.GetComponent<CardUI>();
-
-                if (cardUI != null)
+                if (cardData != null)
                 {
-                    // Inventory表示のためBattleManagerはnull
-                    cardUI.SetupCard(cardData, null); 
-                    // 所持枚数表示の更新ロジック
+                    GameObject cardObject = Instantiate(cardUIPrefab, cardListContent);
+                    CardUI cardUI = cardObject.GetComponent<CardUI>();
+
+                    if (cardUI != null)
+                    {
+                        // Inventory表示のためBattleManagerはnull
+                        cardUI.SetupCard(cardData, null); 
+                        
+                        // 【TODO】コレクション内のカードUIに所持枚数を表示するロジックを追加
+                    }
                 }
             }
         }
@@ -85,26 +90,20 @@ public class InventoryUIController : MonoBehaviour
     /// </summary>
     public void DisplayDeckCards()
     {
-        // 既存のカードUIをクリア (重複を防ぐため)
         if (deckListContent == null)
         {
-            Debug.LogError("DeckListContent (DeckListPanel parent) is not assigned in the Inspector!");
+            Debug.LogError("DeckListContent (DeckListPanel parent) is not assigned!");
             return;
         }
         
+        // 既存のカードUIをクリア (重複を防ぐため)
         foreach (Transform child in deckListContent)
         {
             Destroy(child.gameObject);
         }
 
-        // CardManagerからカードIDリストを取得 (ID 1-20が強制設定済み)
+        // CardManagerからカードIDリストを取得
         List<int> deckIDs = CardManager.Instance.mainDeckCardIDs;
-
-        if (deckIDs.Count == 0)
-        {
-            Debug.LogWarning("Deck list is empty. No cards to display in DeckListPanel.");
-            return;
-        }
 
         foreach (int cardID in deckIDs)
         {
@@ -112,7 +111,6 @@ public class InventoryUIController : MonoBehaviour
 
             if (cardData != null)
             {
-                // UIを生成し、DeckListContentの子要素にする
                 GameObject cardObject = Instantiate(cardUIPrefab, deckListContent);
                 CardUI cardUI = cardObject.GetComponent<CardUI>();
 
@@ -139,30 +137,46 @@ public class InventoryUIController : MonoBehaviour
             int currentCount = CardManager.Instance.GetMainDeckCount();
             deckCountText.text = $"{currentCount} / {CardManager.Instance.deckSizeLimit}";
             
-            deckCountText.color = (currentCount == CardManager.Instance.deckSizeLimit) ? Color.white : Color.red;
+            deckCountText.color = (currentCount == CardManager.Instance.deckSizeLimit) ? Color.white : Color.yellow;
+        }
+        
+        // DeckCountUI.csのインスタンスも更新
+        DeckCountUI existingDeckCountUI = FindObjectOfType<DeckCountUI>();
+        if (existingDeckCountUI != null)
+        {
+            existingDeckCountUI.UpdateDeckCount();
         }
     }
 
     // -------------------------------------------------------------------
-    // ボタンのイベントハンドラ (省略)
+    // その他イベントハンドラ
     // -------------------------------------------------------------------
     
     public void OnCardAddedToDeck(int cardID)
     {
-        // ... (デッキに追加するロジック)
         UpdateDeckCountUI();
         DisplayDeckCards(); 
     }
     
     public void OnCardRemovedFromDeck(int cardID)
     {
-        // ... (デッキから削除するロジック)
         UpdateDeckCountUI();
         DisplayDeckCards(); 
     }
     
     public void OnToBattleButtonClicked()
     {
+        // デッキが規定サイズ（deckSizeLimit）に達していないとバトル開始できないようにするガード
+        if (CardManager.Instance.GetMainDeckCount() != CardManager.Instance.deckSizeLimit)
+        {
+            Debug.LogWarning($"Cannot start battle. Deck size is {CardManager.Instance.GetMainDeckCount()} / {CardManager.Instance.deckSizeLimit}.");
+            return;
+        }
+        
         // 【TODO】次のシーンへの遷移ロジック
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.LoadBattleScene();
+        }
     }
 }

@@ -16,7 +16,7 @@ public enum ElementType
 // レアリティの定義
 public enum CardRarity
 {
-    N,      // 42枚
+    // N (Normal) を削除
     R,      // 30枚
     SR,     // 21枚
     SSR     // 7枚

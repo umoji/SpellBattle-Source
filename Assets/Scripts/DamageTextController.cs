@@ -79,7 +79,7 @@ public class DamageTextController : MonoBehaviour
         }
     }
 
-    void Update()
+void Update()
     {
         timer += Time.deltaTime;
         
@@ -93,18 +93,26 @@ public class DamageTextController : MonoBehaviour
         // 3. フェードアウト処理
         if (timer >= disappearTime)
         {
-            float fadeProgress = (timer - disappearTime);
-            float alpha = startColor.a * (1f - fadeProgress * fadeSpeed);
+            // Time.deltaTimeを使用して、フレームレートに依存しないスムーズな減衰を実現
+            float alphaDelta = fadeSpeed * Time.deltaTime; 
             
-            if (alpha <= 0f)
+            Color currentColor = textComponent.color;
+            currentColor.a -= alphaDelta; // アルファ値を減らす
+            textComponent.color = currentColor;
+            
+            if (currentColor.a <= 0f)
             {
-                Destroy(gameObject);
-            }
-            else
-            {
-                Color currentColor = textComponent.color;
-                currentColor.a = alpha;
-                textComponent.color = currentColor;
+                // ★修正箇所★: クローンされた Canvas ルート（PlayerDamageTextCanvas(Clone)）を破棄
+                // スクリプトがアタッチされているオブジェクトの親を破棄することで、メインの Canvas は維持される。
+                if (transform.parent != null)
+                {
+                    Destroy(transform.parent.gameObject);
+                }
+                else
+                {
+                    // 万が一親がない場合（通常は発生しない）、自分自身を破棄
+                    Destroy(gameObject);
+                }
             }
         }
     }
