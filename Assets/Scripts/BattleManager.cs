@@ -96,13 +96,6 @@ public class BattleManager : MonoBehaviour
     {
         Debug.Log("Battle Started.");
         
-        // CardManagerのデッキが空の場合、再ロードを強制 (CleanupData()修正により、ここはデバッグ目的の保険)
-        if (CardManager.Instance != null && CardManager.Instance.mainDeckCardIDs.Count == 0)
-        {
-            Debug.LogWarning("CardManager deck was empty on StartBattle. Forcing LoadAllGameData() again.");
-            CardManager.Instance.LoadAllGameData();
-        }
-        
         // エネミーデータの初期化
         const int TARGET_ENEMY_ID = 1; 
         

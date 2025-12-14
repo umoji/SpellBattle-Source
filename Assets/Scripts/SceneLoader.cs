@@ -13,8 +13,10 @@ public class SceneLoader : MonoBehaviour
     private const string BATTLE_BUTTON_NAME = "StageButton";     
     private const string INVENTORY_BUTTON_NAME = "InventoryButton";
     
-    // 【★修正点★】InventoryScene内のHOMEボタンのGameObject名を "HomeButton" に設定
+    // InventoryScene内のHOMEボタンのGameObject名を "HomeButton" に設定
     private const string INVENTORY_HOME_BUTTON_NAME = "HomeButton"; 
+    
+    // ★修正点★: GachaButton関連の定数は HomeUIController に移譲するため削除
     
     private const string HOME_SCENE_NAME = "HomeScene";
     private const string BATTLE_SCENE_NAME = "BattleScene";
@@ -74,8 +76,8 @@ public class SceneLoader : MonoBehaviour
                 Button stageButton = stageButtonObj.GetComponent<Button>();
                 if (stageButton != null)
                 {
-                    stageButton.onClick.RemoveAllListeners(); // 既存のリスナーを削除
-                    stageButton.onClick.AddListener(LoadBattleScene); // 新しいリスナーを登録
+                    stageButton.onClick.RemoveAllListeners(); 
+                    stageButton.onClick.AddListener(LoadBattleScene); 
                     Debug.Log($"{BATTLE_BUTTON_NAME} event re-initialized.");
                 }
             }
@@ -100,8 +102,11 @@ public class SceneLoader : MonoBehaviour
             {
                 Debug.LogError($"CRITICAL: {INVENTORY_BUTTON_NAME} GameObject not found in HomeScene. Check name.");
             }
+            
+            // ★修正点★: GachaButtonのイベント登録は HomeUIController に移譲するため、ここにはロジックを追加しない。
         }
-        // 【★修正点★: InventorySceneのHomeボタン設定ロジック】
+        
+        // InventorySceneのHomeボタン設定ロジック
         else if (scene.name == INVENTORY_SCENE_NAME) 
         {
             Debug.Log("InventoryScene loaded. Setting up Home button listener.");
