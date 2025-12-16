@@ -39,9 +39,9 @@ public static class CSVReader
             string effectTypeString = fields[8].Trim().ToUpperInvariant(); // EffectTypeはfields[8]
 
             // --- パースロジック ---
-            // ID (0), Cost (7), Attribute (3), EffectType (8), Power (9)
+            // ID (0), Number (7), Attribute (3), EffectType (8), Power (9)
             if (int.TryParse(fields[0].Trim(), out int id) && 
-                int.TryParse(fields[7].Trim(), out int cost) && // ★修正: Costはインデックス7
+                int.TryParse(fields[7].Trim(), out int number) && // ★修正: Numberはインデックス7
                 int.TryParse(fields[9].Trim(), out int power) && // ★修正: Powerはインデックス9
                 System.Enum.TryParse<ElementType>(attributeString, true, out ElementType attribute) && // Attributeはインデックス3
                 System.Enum.TryParse<EffectType>(effectTypeString, true, out EffectType effectType)) // EffectTypeはインデックス8
@@ -50,7 +50,7 @@ public static class CSVReader
                 {
                     CardID = id,
                     CardName = fields[2].Trim(), // ★修正: CardNameはインデックス2
-                    Cost = cost,
+                    Number = number,
                     EffectText = fields[11].Trim(), // ★修正: EffectTextはインデックス11
                     visualAssetPath = fields[10].Trim(), // ★修正: AssetPathはインデックス10
                     Attribute = attribute,

@@ -1,40 +1,10 @@
 fileFormatVersion: 2
-guid: a68c48199fb7c194f9e022e59d816a04
+guid: 60a135ec1da3d8c4ba64dadbeee09c01
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7184793141658383224
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_0"
-  - first:
-      213: 4894797447424314009
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_1"
-  - first:
-      213: 5867759428532359592
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_2"
-  - first:
-      213: -3521887919043392651
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_3"
-  - first:
-      213: -8756414797215990398
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_4"
-  - first:
-      213: -7492909143459937196
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_5"
-  - first:
-      213: 7402549808160226883
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_6"
-  - first:
-      213: -5355072498181558770
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_7"
-  - first:
-      213: -2284562614547852605
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_8"
-  - first:
-      213: -4041682724697935140
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_9"
-  - first:
-      213: -6673780722345902558
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_10"
+      213: -3083312584722189370
+    second: CardFrameWind_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -143,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_0"
+      name: CardFrameWind_0
       rect:
         serializedVersion: 2
-        x: 331
-        y: 221
-        width: 414
-        height: 633
+        x: 122
+        y: 23
+        width: 476
+        height: 674
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 88c0ace44bc7a4c90800000000000000
-      internalID: -7184793141658383224
+      spriteID: 6c374205a8fd535d0800000000000000
+      internalID: -3083312584722189370
       vertices: []
       indices: 
       edges: []
@@ -168,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 31a13af3acd9ac544984babdbfb5cedc
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -178,18 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      WaterFrame_0: -1815457014
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_0": -7184793141658383224
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_1": 4894797447424314009
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_10": -6673780722345902558
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_2": 5867759428532359592
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_3": -3521887919043392651
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_4": -8756414797215990398
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_5": -7492909143459937196
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_6": 7402549808160226883
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_7": -5355072498181558770
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_8": -2284562614547852605
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (41)_9": -4041682724697935140
+      CardFrameWind_0: -3083312584722189370
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

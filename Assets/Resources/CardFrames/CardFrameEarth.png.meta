@@ -1,40 +1,10 @@
 fileFormatVersion: 2
-guid: d14e241a2bd5cda4e9027457d73d165e
+guid: 129ea3f8f1dcb894cbe255ebd217d415
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6960249646490216171
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_0"
-  - first:
-      213: 6835119879264831070
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_1"
-  - first:
-      213: 5492742778330882927
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_2"
-  - first:
-      213: 9035296261706539819
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_3"
-  - first:
-      213: 5040970322853570433
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_4"
-  - first:
-      213: 7409304277197033753
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_5"
-  - first:
-      213: 5825687236155651570
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_6"
-  - first:
-      213: 3849382954843587593
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_7"
-  - first:
-      213: 3620371901190017385
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_8"
-  - first:
-      213: -8745045605996134617
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_9"
-  - first:
-      213: -4901969249153191513
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_10"
+      213: 6305354181249053367
+    second: CardFrameEarth_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -143,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_1"
+      name: CardFrameEarth_0
       rect:
         serializedVersion: 2
-        x: 317
-        y: 211
-        width: 434
-        height: 657
+        x: 122
+        y: 23
+        width: 476
+        height: 674
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e568ac0f0593bde50800000000000000
-      internalID: 6835119879264831070
+      spriteID: 7b2bf5c783e118750800000000000000
+      internalID: 6305354181249053367
       vertices: []
       indices: 
       edges: []
@@ -168,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 9858b2f0cb2cf194eb5049e8712f8ea0
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -178,17 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_0": 6960249646490216171
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_1": 6835119879264831070
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_10": -4901969249153191513
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_2": 5492742778330882927
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_3": 9035296261706539819
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_4": 5040970322853570433
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_5": 7409304277197033753
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_6": 5825687236155651570
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_7": 3849382954843587593
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_8": 3620371901190017385
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (42)_9": -8745045605996134617
+      CardFrameEarth_0: 6305354181249053367
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

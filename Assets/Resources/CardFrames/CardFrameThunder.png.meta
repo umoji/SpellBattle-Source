@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 9b37794d2138f4e47979fa17c5cae904
+guid: 333eb7d67b424a045b1b95d56d4d8cd9
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7721238128572827261
-    second: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (36)_0"
+      213: 3280781466209093575
+    second: CardFrameThunder_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (36)_0"
+      name: CardFrameThunder_0
       rect:
         serializedVersion: 2
-        x: 338
-        y: 261
-        width: 387
-        height: 620
+        x: 122
+        y: 23
+        width: 476
+        height: 674
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 389f638b4d6a8d490800000000000000
-      internalID: -7721238128572827261
+      spriteID: 7c704177c5da78d20800000000000000
+      internalID: 3280781466209093575
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      "\u540D\u79F0\u672A\u8A2D\u5B9A\u306E\u30C7\u30B6\u30A4\u30F3 (36)_0": -7721238128572827261
+      CardFrameThunder_0: 3280781466209093575
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

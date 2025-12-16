@@ -9,7 +9,7 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
     // --- UIコンポーネントへの参照 ---
     public Image visualImage;     
     public Image frameImage;      
-    public TextMeshProUGUI costText;
+    public TextMeshProUGUI numberText;
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI effectText;
 
@@ -34,14 +34,17 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
         canvasGroup = GetComponent<CanvasGroup>();
         buttonComponent = GetComponent<Button>(); 
         
-        costText.text = data.Cost.ToString();
+        numberText.text = data.Number.ToString();
         nameText.text = data.CardName;
         effectText.text = data.EffectText;
         
         // ユーティリティメソッドの呼び出し
         SetupTextAutoSizing(); 
         LoadVisualImage(data.visualAssetPath); 
+        
+        // ★修正点★: 属性を渡してフレーム画像をロードする
         LoadFrameImage(data.Attribute); 
+        
         SetupFrameAspects(); 
 
         // Buttonのリスナーはドラッグ使用に切り替えたため削除
@@ -59,7 +62,7 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
     public int GetOriginalIndex() { return originalIndex; }
     
     // =================================================================
-    // ★修正箇所★: ドラッグ機能の実装
+    // ドラッグ機能の実装
     // =================================================================
     
     public void OnBeginDrag(PointerEventData eventData) 
@@ -140,7 +143,7 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
         }
     }
     
-    // ★新規追加メソッド★: カードを手札の元の位置に戻す
+    // カードを手札の元の位置に戻す
     private void MoveCardBackToHand()
     {
         if (originalParent != null && rectTransform != null)
@@ -153,7 +156,7 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
     }
 
     // =================================================================
-    // ユーティリティメソッドの実装 (省略せず再掲)
+    // ユーティリティメソッドの実装
     // =================================================================
 
     private void SetupFrameAspects()
@@ -180,7 +183,7 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
     {
         if (visualImage == null) return;
         
-        // ★注意★: アセット名が 'default_visual' のままなので、必要に応じて 'ETNR_001' などに変更
+        // アセット名が 'default_visual' のままなので、必要に応じて 'ETNR_001' などに変更
         string finalAssetPath = string.IsNullOrEmpty(assetPath) ? "default_visual" : assetPath; 
         string path = "CardVisuals/" + finalAssetPath;
         
@@ -199,6 +202,7 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
         }
     }
 
+    // ★修正箇所★: 属性名に基づいてフレーム画像をロードするように修正
     private void LoadFrameImage(ElementType attribute) 
     {
         if (frameImage == null)
@@ -207,7 +211,9 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
             return;
         }
 
-        string assetName = "CardFrame"; 
+        // フレーム画像の命名規則: "CardFrame" + 属性名 (例: "CardFrameFire")
+        string assetName = "CardFrame" + attribute.ToString(); 
+        // フォルダパスと連結
         string path = "CardFrames/" + assetName;
         
         Sprite frameSprite = Resources.Load<Sprite>(path);
@@ -216,10 +222,11 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
         {
             frameImage.sprite = frameSprite;
             frameImage.color = Color.white;
+            Debug.Log($"Load Frame Success: {path}");
         }
         else
         {
-            Debug.LogError($"CRITICAL: Frame Sprite NOT found at Resources path: {path}.");
+            Debug.LogError($"CRITICAL: Attribute Frame Sprite NOT found at Resources path: {path}. Check asset path and file name.");
             frameImage.sprite = null;
         }
     }
@@ -231,10 +238,10 @@ public class CardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHa
             nameText.fontSizeMin = 8; 
             nameText.fontSizeMax = 32; 
         }
-        if (costText != null) {
-            costText.enableAutoSizing = true;
-            costText.fontSizeMin = 6; 
-            costText.fontSizeMax = 24; 
+        if (numberText != null) {
+            numberText.enableAutoSizing = true;
+            numberText.fontSizeMin = 6; 
+            numberText.fontSizeMax = 24; 
         }
         if (effectText != null) {
             effectText.enableAutoSizing = true;

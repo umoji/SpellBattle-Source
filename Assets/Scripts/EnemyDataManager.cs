@@ -41,7 +41,7 @@ public class EnemyDataManager : MonoBehaviour
             Debug.LogError($"CRITICAL: CSVファイルが見つかりません: Resources/{ENEMY_CSV_FILE_NAME}.txt。安全モックデータを使用します。");
             
             // 安全モックデータ
-            CardData mockCard = new CardData { CardID = 1, CardName = "Safety Mock Card", Attribute = ElementType.Fire, Cost = 1, Power = 100, EffectType = EffectType.DamageTarget, EffectText = "Safety 100 Damage" };
+            CardData mockCard = new CardData { CardID = 1, CardName = "Safety Mock Card", Attribute = ElementType.Fire, Number = 1, Power = 100, EffectType = EffectType.DamageTarget, EffectText = "Safety 100 Damage" };
             EnemyData mockEnemy = new EnemyData { EnemyID = 1, EnemyName = "Safety Mock", MaxHP = 5000, BaseAttackDamage = 30, Attribute = ElementType.Fire, CardData = mockCard };
             AllEnemyData.Add(mockEnemy);
             
@@ -75,7 +75,7 @@ public class EnemyDataManager : MonoBehaviour
                 int.TryParse(fields[4].Trim(), out int maxHp) && // fields[4]
                 int.TryParse(fields[5].Trim(), out int attackPower) && // fields[5]
                 int.TryParse(fields[6].Trim(), out int patternId) && // fields[6]
-                int.TryParse(fields[7].Trim(), out int cost) && // fields[7]
+                int.TryParse(fields[7].Trim(), out int number) && // fields[7]
                 
                 System.Enum.TryParse<CardRarity>(rarityString, true, out CardRarity rarity) && // fields[1]
                 System.Enum.TryParse<EffectType>(effectTypeString, true, out EffectType effectType) && // fields[8]
@@ -89,7 +89,7 @@ public class EnemyDataManager : MonoBehaviour
                     CardName = fields[2].Trim(), 
                     visualAssetPath = fields[10].Trim(), // ★修正: AssetPathはfields[10]
                     Attribute = attribute,
-                    Cost = cost,
+                    Number = number,
                     Rarity = rarity,
                     EffectType = effectType,
                     Power = power,

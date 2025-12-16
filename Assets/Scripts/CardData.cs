@@ -12,7 +12,7 @@ public class CardData
     
     // --- ゲームバランスデータ ---
     public ElementType Attribute; // 属性（火、水、風など）- GameEnums.csで定義
-    public int Cost;             // 使用コスト
+    public int Number;             // Number
     public CardRarity Rarity;    // レアリティ (N, R, SR, SSR) - GameEnums.csで定義
 
     // --- 効果データ ---

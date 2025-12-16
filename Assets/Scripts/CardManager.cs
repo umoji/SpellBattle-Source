@@ -263,12 +263,15 @@ public class CardManager : MonoBehaviour
             
             if (fields.Length < 12) continue;
 
-            // fields[1] Rarity, fields[3] Attribute, fields[7] Cost, fields[8] EffectType, fields[9] Power
-            if (int.TryParse(fields[0].Trim(), out int id) && 
+            // fields[1] Rarity, fields[3] Attribute, fields[7] Number, fields[8] EffectType, fields[9] Power
+				if (int.TryParse(fields[0].Trim(), out int id) && 
                 System.Enum.TryParse<ElementType>(fields[3].Trim(), true, out ElementType attribute) &&
-                System.Enum.TryParse<CardRarity>(fields[1].Trim(), true, out CardRarity rarity) && // Rarity
+                System.Enum.TryParse<CardRarity>(fields[1].Trim(), true, out CardRarity rarity) &&
                 System.Enum.TryParse<EffectType>(fields[8].Trim(), true, out EffectType effectType) && 
-                int.TryParse(fields[7].Trim(), out int cost) &&
+                
+                // ★修正点 1: int.TryParse の変数名を cost から number に変更
+                int.TryParse(fields[7].Trim(), out int number) &&
+                
                 int.TryParse(fields[9].Trim(), out int power))
             {
                 CardData card = new CardData
@@ -277,7 +280,10 @@ public class CardManager : MonoBehaviour
                     Rarity = rarity,
                     CardName = fields[2].Trim(), 
                     Attribute = attribute,
-                    Cost = cost,
+                    
+                    // ★修正点 2: Cost = cost を Number = number に変更
+                    Number = number,
+                    
                     EffectType = effectType,
                     Power = power,
                     EffectText = fields[11].Trim(),

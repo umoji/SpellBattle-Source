@@ -307,7 +307,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardUI
   visualImage: {fileID: 5023616575530225709}
   frameImage: {fileID: 5711809108214250224}
-  costText: {fileID: 2868370687574048105}
+  numberText: {fileID: 2868370687574048105}
   nameText: {fileID: 5106033308798629487}
   effectText: {fileID: 5297497530401905933}
 --- !u!225 &2959850907482162623
@@ -334,7 +334,7 @@ GameObject:
   - component: {fileID: 5287514292393873273}
   - component: {fileID: 2868370687574048105}
   m_Layer: 5
-  m_Name: CostText
+  m_Name: NumberText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

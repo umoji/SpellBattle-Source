@@ -12,7 +12,8 @@ public class BattleManager : MonoBehaviour
     // 1. UI 参照 
     // -------------------------------------------------------------------
     [Header("UI References")]
-    public TextMeshProUGUI costText; 
+    // ★修正点 1: costText を numberText に変更
+    public TextMeshProUGUI numberText; // ターン数など、ゲームの状態を表示するテキスト
     public TextMeshProUGUI playerHPText;
     public TextMeshProUGUI enemyHPText; 
     public TextMeshProUGUI enemyNameText; 
@@ -20,11 +21,11 @@ public class BattleManager : MonoBehaviour
     public Image enemyHPFillImage; 
     public Button endTurnButton; 
     public RectTransform handArea; 
-
+    
     [Header("Animation References")]
     public ButtonFlasher buttonFlasher; 
-    public GameObject enemyDamagePrefab;   // ★★★ 修正箇所: 敵へのダメージ用プレハブ ★★★
-    public GameObject playerDamagePrefab;  // ★★★ 修正箇所: プレイヤーへのダメージ用プレハブ ★★★
+    public GameObject enemyDamagePrefab;   
+    public GameObject playerDamagePrefab;  
     
     [Header("Enemy Components")]
     public EnemyAnimator enemyAnimator;
@@ -99,7 +100,7 @@ public class BattleManager : MonoBehaviour
         // エネミーデータの初期化
         const int TARGET_ENEMY_ID = 1; 
         
-        // 【★修正ポイント★：EnemyData.csの固定データを直接使用し、RED DRAGONを強制する】
+        // 【★EnemyData.csの固定データを直接使用し、RED DRAGONを強制する】
         EnemyData staticEnemyData = EnemyData.GetFixedDataByID(TARGET_ENEMY_ID);
         
         if (staticEnemyData != null)
@@ -133,13 +134,7 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        // ★★★ 確認ログ 1 ★★★: デッキコピー直後の確認
-        Debug.Log($"--- BATTLE INIT CHECK 1 --- Deck Size after copy: {dataContainer.playerData.deck.Count}");
-        
         DrawCards(5); // 初回は5枚ドロー
-
-        // ★★★ 確認ログ 2 ★★★: ドロー後の確認
-        Debug.Log($"--- BATTLE INIT CHECK 2 --- Deck Size after draw: {dataContainer.playerData.deck.Count}, Hand Size: {dataContainer.playerData.hand.Count}");
 
         StartPlayerTurn(); 
     }
@@ -154,10 +149,13 @@ public class BattleManager : MonoBehaviour
         isPlayerTurn = true;
         currentTurnCount++;
         
+        // ★修正点 2: コスト回復ロジックを削除 (ナンバー制のため)
+        /*
         if (dataContainer.playerData != null)
         {
             dataContainer.playerData.currentCost = dataContainer.playerData.currentMaxCost; 
         }
+        */
 
         const int BASE_HAND_SIZE = 5;
         // dataContainer.playerData.hand を参照
@@ -176,7 +174,8 @@ public class BattleManager : MonoBehaviour
 
         UpdateUI();
         
-        Debug.Log($"Player Turn {currentTurnCount} started. Cost: {dataContainer.playerData.currentCost}");
+        // ★修正点 3: ログからコスト表示を削除
+        Debug.Log($"Player Turn {currentTurnCount} started.");
     }
 
     public void OnEndTurnButtonClicked()
@@ -189,6 +188,17 @@ public class BattleManager : MonoBehaviour
         isPlayerTurn = false;
         if (buttonFlasher != null) { buttonFlasher.StopFlashing(); }
         
+        // dataContainer.playerData.hand を参照
+        // ターン終了時に手札を全て捨てる処理 (ゲームデザインによっては不要)
+        /*
+        foreach(CardData card in dataContainer.playerData.hand.ToList())
+        {
+             dataContainer.playerData.discardPile.Add(card.CardID);
+        }
+        dataContainer.playerData.hand.Clear();
+        // UI上からカードオブジェクトを削除する処理も必要
+        */
+
         StartCoroutine(EnemyTurnCoroutine());
     }
 
@@ -238,14 +248,12 @@ public class BattleManager : MonoBehaviour
             // HPが実際に減った場合（ダメージが0以上の場合）に処理を実行
             if (oldHP > dataContainer.playerData.currentHP)
             {
-                // ★★★ 修正箇所: デバッグログの追加 ★★★
                 Debug.Log("--- PLAYER HIT! Calling ShowPlayerDamageText. ---"); 
                 
                 ShowPlayerDamageText(damage);
             }
             else
             {
-                 // デバッグ用: ダメージを受けたはずなのにHPが減らなかった場合
                  Debug.Log($"Player HP change: {oldHP} -> {dataContainer.playerData.currentHP}. Damage was {damage}. No damage text shown.");
             }
         }
@@ -347,16 +355,14 @@ public class BattleManager : MonoBehaviour
     
     public bool UseCard(GameObject cardObjectToDestroy, CardData cardData)
     { 
-        // CardDataにCostプロパティが存在すると仮定
-        int cardCost = 1; // 仮のコスト値
-        // if (cardData.Cost != null) { cardCost = cardData.Cost; } // 実際のプロパティ名に修正してください
+        // ★修正点 4: ナンバー制に移行したため、コストチェックと消費ロジックを削除
 
-        if (!isPlayerTurn || dataContainer.playerData.currentCost < cardCost)
+        // ターン中であれば常にカード使用は成功と仮定
+        if (!isPlayerTurn)
         {
             return false;
         }
 
-        dataContainer.playerData.currentCost -= cardCost;
         ApplyCardEffect(cardData);
         
         // dataContainer.playerData.hand と discardPile を参照
@@ -373,8 +379,8 @@ public class BattleManager : MonoBehaviour
 
     private void ApplyCardEffect(CardData cardData)
     {
-        // ダメージ処理の仮実装 (元のコードに合わせて10ダメージを仮定)
-        int damage = 10; 
+        // ナンバー制に基づいた新しいゲームロジックを実装する
+        int damage = cardData.Number * 10; // 仮の実装: ナンバー × 10 ダメージ
         
         if (damage > 0 && dataContainer.enemyData != null)
         {
@@ -413,7 +419,7 @@ public class BattleManager : MonoBehaviour
                 }
 
                 // ダメージテキストのポップアップを呼び出す
-                if (enemyDamagePrefab != null) // ★★★ 修正箇所: enemyDamagePrefabを使用 ★★★
+                if (enemyDamagePrefab != null) 
                 {
                     ShowDamageText(damage);
                 }
@@ -426,14 +432,14 @@ public class BattleManager : MonoBehaviour
     /// </summary>
     private void ShowDamageText(int damageAmount)
     {
-        if (enemyDamagePrefab == null) // ★★★ 修正箇所: enemyDamagePrefabのチェック ★★★
+        if (enemyDamagePrefab == null)
         {
             Debug.LogError("Enemy Damage PrefabがInspectorに設定されていません。");
             return;
         }
 
         // 親なしで生成（Screen Space Canvasプレハブのデフォルト動作に依存）
-        GameObject damageTextInstance = Instantiate(enemyDamagePrefab); // ★★★ 修正箇所: enemyDamagePrefabを使用 ★★★
+        GameObject damageTextInstance = Instantiate(enemyDamagePrefab); 
         
         // Controllerが子オブジェクトにあるため、GetComponentInChildrenで取得
         DamageTextController controller = damageTextInstance.GetComponentInChildren<DamageTextController>();
@@ -457,7 +463,6 @@ public class BattleManager : MonoBehaviour
         controller.SetDamageValue(damageAmount);
     }
     
-// ★★★ 修正箇所: プレイヤーダメージポップアップ用メソッド ★★★
     /// <summary>
     /// プレイヤーのHPバー付近にダメージテキストを表示する (Screen Space対応)
     /// </summary>
@@ -517,11 +522,12 @@ public class BattleManager : MonoBehaviour
         if (dataContainer == null) return;
         
         // --- プレイヤーUIの更新 ---
-        if (costText != null) 
+        // ★修正点 5: numberTextにターン数を表示
+        if (numberText != null) 
         { 
-            // dataContainer.playerDataにcurrentMaxCostがあると仮定
-            costText.text = $"{dataContainer.playerData.currentCost} / {dataContainer.playerData.currentMaxCost}"; 
+            numberText.text = $"Turn: {currentTurnCount}"; 
         }
+
         if (playerHPText != null) 
         { 
             playerHPText.text = $"{dataContainer.playerData.currentHP} / {dataContainer.playerData.maxHP}"; 
@@ -534,7 +540,6 @@ public class BattleManager : MonoBehaviour
         // エネミーUIの更新
         if (dataContainer.enemyData != null && dataContainer.enemyData.enemyData != null)
         {
-            // dataContainer.enemyData.enemyDataにMaxHPとEnemyNameがあると仮定
             int maxHp = dataContainer.enemyData.enemyData.MaxHP; 
             int currentHp = dataContainer.enemyData.currentHP;
             string enemyName = dataContainer.enemyData.enemyData.EnemyName;
@@ -553,15 +558,8 @@ public class BattleManager : MonoBehaviour
         {
             endTurnButton.interactable = isPlayerTurn;
             
-            // コストが残っているか、または手札を使い切ったかで点滅を切り替える
-            if (isPlayerTurn && dataContainer.playerData.currentCost > 0)
-            {
-                buttonFlasher.StartFlashing();
-            }
-            else
-            {
-                buttonFlasher.StopFlashing();
-            }
+            // ナンバー制にはコスト制限がないため、点滅は常に停止
+            buttonFlasher.StopFlashing(); 
         }
     }
 
@@ -618,11 +616,8 @@ public class BattleManager : MonoBehaviour
     /// </summary>
 	public void OnEndScreenClicked()
 	{
-		// シーン遷移前に、マネージャーのデータをリセットする
-
 		if (CardManager.Instance != null)
 		{
-			// CardManagerのCleanupData()は、マスターデッキと所持カード数を保護するよう修正済み
 			CardManager.Instance.CleanupData(); 
 		}
 		if (EnemyDataManager.Instance != null)
@@ -630,8 +625,7 @@ public class BattleManager : MonoBehaviour
 			EnemyDataManager.Instance.CleanupData(); 
 		}
 		
-        // 【★修正ポイント 2: ライブバトルデータのクリア★】
-        // バトルで使用したライブデータ（山札、手札、墓地）をクリアする
+        // 【ライブバトルデータのクリア】
         if (dataContainer != null && dataContainer.playerData != null)
         {
             dataContainer.playerData.deck.Clear();
@@ -641,7 +635,7 @@ public class BattleManager : MonoBehaviour
             Debug.Log("BattleDataContainer player live data cleared (Deck, Hand, Discard).");
         }
         
-        // ゲーム終了UIパネルを破棄（HomeSceneでの入力ブロックを防ぐ）
+        // ゲーム終了UIパネルを破棄
         if (gameEndPanel != null)
         {
             Destroy(gameEndPanel); 
@@ -657,9 +651,4 @@ public class BattleManager : MonoBehaviour
 			Debug.LogError("SceneLoader is missing. Cannot load HomeScene.");
 		}
 	}
-    
-    // -------------------------------------------------------------------
-    // 9. データ取得メソッド
-    // -------------------------------------------------------------------
-    public int GetCurrentPlayerCost() { return dataContainer != null ? dataContainer.playerData.currentCost : 0; }
 }
