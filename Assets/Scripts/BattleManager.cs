@@ -8,30 +8,23 @@ using System;
 
 public class BattleManager : MonoBehaviour
 {
-    // -------------------------------------------------------------------
-    // 1. UI 参照 
-    // -------------------------------------------------------------------
     [Header("UI References")]
     public TextMeshProUGUI numberText; 
     public TextMeshProUGUI playerHPText;
     public TextMeshProUGUI enemyHPText; 
-    public TextMeshProUGUI enemyNameText; 
     public Image playerHPFillImage; 
     public Image enemyHPFillImage; 
-    
-    // 「選択したカードを消費して、攻撃する」ためのボタン
+    public TextMeshProUGUI enemyNameText;
     public Button actionButton; 
     public RectTransform handArea; 
+    public Transform damageTextParent; 
 
     [Header("Animation References")]
-    public ButtonFlasher buttonFlasher; 
     public GameObject enemyDamagePrefab;   
     public GameObject playerDamagePrefab;  
-    
-    [Header("Enemy Components")]
+    public GameObject multiplierTextPrefab;
     public EnemyAnimator enemyAnimator;
-
-    [Header("Player Components")]
+    public Transform enemyDamageAnchor; 
     public Transform playerDamageAnchor; 
 
     [Header("Card UI References")]
@@ -42,9 +35,6 @@ public class BattleManager : MonoBehaviour
     public TextMeshProUGUI resultText;     
     public Button returnToHomeButton;       
     
-    // -------------------------------------------------------------------
-    // 2. 状態管理
-    // -------------------------------------------------------------------
     private List<CardUI> selectedCards = new List<CardUI>(); 
     private int currentTurnCount = 0;
     private bool isPlayerTurn = false;
@@ -54,213 +44,196 @@ public class BattleManager : MonoBehaviour
     private SceneLoader sceneLoader; 
     private const int MAX_HAND_SIZE = 10; 
 
-    // -------------------------------------------------------------------
-    // 3. Unity ライフサイクル 
-    // -------------------------------------------------------------------
+    [Header("Combo Settings")]
+    public float comboMultiplier = 1.5f; 
+    // オレンジ色の定義（R=1, G=0.5, B=0）
+    private Color comboColor = new Color(1.0f, 0.5f, 0.0f);
+
     void Start()
     {
         if (dataContainer == null) return;
         sceneLoader = SceneLoader.Instance; 
-
         if (gameEndPanel != null) gameEndPanel.SetActive(false);
         if (returnToHomeButton != null) returnToHomeButton.onClick.AddListener(OnEndScreenClicked);
         
-        // ボタンの設定
         if (actionButton != null)
         {
             actionButton.onClick.AddListener(ExecutePlayerAttack);
             var buttonText = actionButton.GetComponentInChildren<TextMeshProUGUI>();
             if (buttonText != null) buttonText.text = "Attack!";
-            actionButton.interactable = false; // 最初はカード未選択なので無効
+            actionButton.interactable = false;
         }
-
-        // ★シーン開始時に即座にバトルをセットアップしてカードを配る
         StartBattle();
     }
 
-    // -------------------------------------------------------------------
-    // 4. コンボ選択ロジック
-    // -------------------------------------------------------------------
-    
-    public bool OnCardSelected(CardUI cardUI)
-    {
-        if (!isPlayerTurn) return false;
-
-        CardData newCard = cardUI.GetCardData();
-
-        if (selectedCards.Count > 0)
-        {
-            CardData lastCard = selectedCards[selectedCards.Count - 1].GetCardData();
-            // 数字か属性が一致すれば連鎖可能
-            if (newCard.Number != lastCard.Number && newCard.Attribute != lastCard.Attribute)
-            {
-                return false;
-            }
-        }
-
-        selectedCards.Add(cardUI);
-        UpdateUI(); 
-        return true;
-    }
-
-    public void OnCardDeselected(CardUI cardUI)
-    {
-        int index = selectedCards.IndexOf(cardUI);
-        if (index != -1)
-        {
-            for (int i = selectedCards.Count - 1; i >= index; i--)
-            {
-                selectedCards[i].ResetPosition();
-                selectedCards.RemoveAt(i);
-            }
-        }
-        UpdateUI();
-    }
-
-    // ★ボタンから呼ばれる攻撃実行処理
     public void ExecutePlayerAttack()
     {
         if (selectedCards.Count == 0 || !isPlayerTurn) return;
+        StartCoroutine(ComboAttackRoutine());
+    }
 
-        int totalDamage = 0;
-        foreach (var cardUI in selectedCards)
+    private IEnumerator ComboAttackRoutine()
+    {
+        isPlayerTurn = false; 
+        actionButton.interactable = false;
+
+        float totalDamageFloat = 0;
+        List<GameObject> cardsToRemove = new List<GameObject>();
+        List<DamageTextController> activeDamageTexts = new List<DamageTextController>();
+
+        int consecutiveNumbers = 1;
+        int consecutiveAttributes = 1;
+        CardData lastCard = null;
+
+        for (int i = 0; i < selectedCards.Count; i++)
         {
-            CardData data = cardUI.GetCardData();
-            totalDamage += data.Number * 10;
-            
-            if (dataContainer.playerData.hand.Remove(data))
+            CardUI cardUI = selectedCards[i];
+            CardData currentCard = cardUI.GetCardData();
+            int baseCardDamage = currentCard.Number * 10;
+            float currentMultiplier = 1.0f;
+            bool isCombo = false;
+
+            if (lastCard != null)
             {
-                dataContainer.playerData.discardPile.Add(data.CardID);
+                if (currentCard.Number == lastCard.Number) consecutiveNumbers++;
+                else consecutiveNumbers = 1;
+
+                if (currentCard.Attribute == lastCard.Attribute) consecutiveAttributes++;
+                else consecutiveAttributes = 1;
+
+                if (consecutiveNumbers >= 3 || consecutiveAttributes >= 3)
+                {
+                    currentMultiplier = comboMultiplier;
+                    isCombo = true;
+                }
             }
-            Destroy(cardUI.gameObject);
+
+            int finalCardDamage = Mathf.RoundToInt(baseCardDamage * currentMultiplier);
+            totalDamageFloat += finalCardDamage;
+
+            // ★修正：コンボ中ならオレンジ、通常なら白を指定
+            Color dColor = isCombo ? comboColor : Color.white;
+
+            // 1. ダメージテキストを表示（色を指定）
+            GameObject dtObj = ShowTextAtTargetPerfectly(enemyDamagePrefab, cardUI.transform, finalCardDamage.ToString(), dColor, false); 
+            if (dtObj != null)
+            {
+                DamageTextController ctrl = dtObj.GetComponentInChildren<DamageTextController>();
+                if (ctrl != null) activeDamageTexts.Add(ctrl);
+            }
+
+            // 2. コンボ中なら倍率テキストを表示
+			if (isCombo && multiplierTextPrefab != null)
+			{
+				// 倍率テキストを表示
+				GameObject multiObj = ShowTextAtTargetPerfectly(multiplierTextPrefab, cardUI.transform, $"x{currentMultiplier}!!", comboColor, true);
+				if (multiObj != null)
+				{
+					// ① 位置をさらに上に（50f を 80f などに増やす）
+					multiObj.transform.localPosition += new Vector3(0, 80f, 0);
+
+					// ② 軽く斜めにする（Z軸を 15度 ほど傾ける）
+					multiObj.transform.localRotation = Quaternion.Euler(0, 0, 15f);
+				}
+			}
+
+            CanvasGroup cg = cardUI.GetComponent<CanvasGroup>();
+            if (cg != null) cg.alpha = 0; 
+            cardsToRemove.Add(cardUI.gameObject);
+
+            if (dataContainer.playerData.hand.Remove(currentCard))
+                dataContainer.playerData.discardPile.Add(currentCard.CardID);
+
+            lastCard = currentCard;
+            yield return new WaitForSeconds(0.25f);
         }
 
-        ApplyDamageToEnemy(totalDamage);
+        yield return new WaitForSeconds(0.5f);
+
+        foreach (var dt in activeDamageTexts)
+        {
+            if (dt != null) dt.DestroyWithFade();
+        }
+        yield return new WaitForSeconds(0.2f);
+
+        foreach (var cardObj in cardsToRemove) Destroy(cardObj);
+
+        ApplyDamageToEnemy(Mathf.RoundToInt(totalDamageFloat));
+
         selectedCards.Clear();
         UpdateUI();
-        EndTurn(); 
+        EndTurn();
     }
 
-    // -------------------------------------------------------------------
-    // 5. バトルフロー
-    // -------------------------------------------------------------------
-    public void StartBattle()
+    // ★色(textColor)を受け取れるように拡張
+    private GameObject ShowTextAtTargetPerfectly(GameObject prefab, Transform targetTransform, string textValue, Color textColor, bool autoDestroy)
     {
-        // 敵の初期化
-        EnemyData staticEnemyData = EnemyData.GetFixedDataByID(1);
-        if (staticEnemyData != null) dataContainer.enemyData = new EnemyBattleData(staticEnemyData);
-
-        // デッキの準備
-        if (CardManager.Instance != null)
-        {
-            dataContainer.playerData.deck.Clear();
-            dataContainer.playerData.hand.Clear();
-            dataContainer.playerData.discardPile.Clear();
-            dataContainer.playerData.deck.AddRange(CardManager.Instance.mainDeckCardIDs);
-            ShuffleDeckIDs(); 
-        }
-
-        // ★即座にドロー
-        DrawCards(5); 
-        StartPlayerTurn(); 
-    }
-
-    private void StartPlayerTurn()
-    {
-        isPlayerTurn = true;
-        currentTurnCount++;
+        if (prefab == null || targetTransform == null) return null;
         
-        // 2ターン目以降の補充ドロー
-        if (currentTurnCount > 1)
+        GameObject inst = Instantiate(prefab);
+        inst.transform.position = targetTransform.position;
+        inst.transform.SetParent(damageTextParent, true);
+        inst.transform.localScale = Vector3.one;
+        Vector3 lp = inst.transform.localPosition;
+        lp.z = 0;
+        inst.transform.localPosition = lp;
+
+        // テキストコンポーネントを取得して内容と色をセット
+        TextMeshProUGUI textComp = inst.GetComponentInChildren<TextMeshProUGUI>();
+        if (textComp != null)
         {
-            int cardsToReplenish = 5 - dataContainer.playerData.hand.Count;
-            if (cardsToReplenish > 0) DrawCards(cardsToReplenish); 
-            if (dataContainer.playerData.hand.Count < MAX_HAND_SIZE) DrawCards(1); 
+            textComp.text = textValue;
+            textComp.color = textColor; // ★ここで色を変更！
         }
 
-        UpdateUI();
-    }
-
-    private void EndTurn()
-    {
-        isPlayerTurn = false;
-        selectedCards.Clear();
-        UpdateUI(); 
-        StartCoroutine(EnemyTurnCoroutine());
-    }
-
-    private IEnumerator EnemyTurnCoroutine()
-    {
-        yield return new WaitForSeconds(1.5f); 
-        ApplyDamageToPlayer(30); 
-        UpdateUI();
-        CheckGameEnd(); 
-        if (dataContainer.playerData.currentHP > 0 && dataContainer.enemyData.currentHP > 0)
+        DamageTextController controller = inst.GetComponentInChildren<DamageTextController>();
+        if (controller != null)
         {
-            StartPlayerTurn();
+            controller.autoDestroy = autoDestroy; 
         }
+        return inst;
     }
 
-    // -------------------------------------------------------------------
-    // 6. ダメージ・UI処理 
-    // -------------------------------------------------------------------
-    private void UpdateUI()
-    {
-        if (dataContainer == null) return;
-        
-        if (numberText != null) numberText.text = $"Turn: {currentTurnCount}"; 
-        if (playerHPText != null) playerHPText.text = $"{dataContainer.playerData.currentHP} / {dataContainer.playerData.maxHP}"; 
-        if (playerHPFillImage != null) playerHPFillImage.fillAmount = (float)dataContainer.playerData.currentHP / dataContainer.playerData.maxHP; 
-        
-        if (dataContainer.enemyData != null && dataContainer.enemyData.enemyData != null)
-        {
-            enemyHPText.text = $"{dataContainer.enemyData.currentHP} / {dataContainer.enemyData.enemyData.MaxHP}";
-            enemyHPFillImage.fillAmount = (float)dataContainer.enemyData.currentHP / dataContainer.enemyData.enemyData.MaxHP;
-            enemyNameText.text = dataContainer.enemyData.enemyData.EnemyName;
-        }
-
-        // カードを1枚でも選んでいれば「Attack!」ボタンが押せる
-        if (actionButton != null)
-        {
-            actionButton.interactable = (isPlayerTurn && selectedCards.Count > 0);
-        }
-    }
-
-    // --- 補助メソッド（省略なし） ---
-    private void ApplyDamageToEnemy(int damage) { if (dataContainer.enemyData != null) { dataContainer.enemyData.currentHP -= damage; if (dataContainer.enemyData.currentHP < 0) dataContainer.enemyData.currentHP = 0; if (enemyAnimator != null) enemyAnimator.PlayHitAnimation(); ShowDamageText(damage); } }
-    private void ApplyDamageToPlayer(int damage) { if (dataContainer.playerData != null) { dataContainer.playerData.currentHP -= damage; if (dataContainer.playerData.currentHP < 0) dataContainer.playerData.currentHP = 0; ShowPlayerDamageText(damage); } }
-    
-    private void DrawCards(int count) 
+    private void ApplyDamageToEnemy(int damage) 
     { 
-        for (int i = 0; i < count; i++) 
+        if (dataContainer.enemyData != null) 
         { 
-            if (dataContainer.playerData.hand.Count >= MAX_HAND_SIZE) break; 
-            if (dataContainer.playerData.deck.Count == 0) 
+            dataContainer.enemyData.currentHP -= damage; 
+            if (dataContainer.enemyData.currentHP < 0) dataContainer.enemyData.currentHP = 0; 
+            if (enemyAnimator != null) enemyAnimator.PlayHitAnimation(); 
+            if (enemyDamageAnchor != null)
+            {
+                // 敵へのダメージ（最終ダメージ）は白で表示（コンボ時はここもオレンジにしたい場合は変えられます）
+                ShowTextAtTargetPerfectly(enemyDamagePrefab, enemyDamageAnchor, damage.ToString(), Color.white, true);
+            }
+        } 
+    }
+
+    private void ApplyDamageToPlayer(int d) 
+    { 
+        if (dataContainer.playerData != null) 
+        { 
+            dataContainer.playerData.currentHP -= d; 
+            if (dataContainer.playerData.currentHP < 0) dataContainer.playerData.currentHP = 0; 
+            if (playerDamagePrefab != null && playerDamageAnchor != null) 
             { 
-                if (dataContainer.playerData.discardPile.Count > 0) 
-                { 
-                    dataContainer.playerData.deck.AddRange(dataContainer.playerData.discardPile); 
-                    dataContainer.playerData.discardPile.Clear(); 
-                    ShuffleDeckIDs(); 
-                } 
-                else break; 
-            } 
-            int cardID = dataContainer.playerData.deck[0]; 
-            dataContainer.playerData.deck.RemoveAt(0); 
-            CardData drawnCard = CardManager.Instance.GetCardDataByID(cardID); 
-            dataContainer.playerData.hand.Add(drawnCard); 
-            if (cardUIPrefab != null && handArea != null) 
-            { 
-                GameObject cardObject = Instantiate(cardUIPrefab, handArea); 
-                cardObject.GetComponent<CardUI>().SetupCard(drawnCard, this); 
+                ShowTextAtTargetPerfectly(playerDamagePrefab, playerDamageAnchor, d.ToString(), Color.white, true); 
             } 
         } 
     }
 
-    private void ShowDamageText(int damage) { if (enemyDamagePrefab != null) { GameObject dt = Instantiate(enemyDamagePrefab); dt.GetComponentInChildren<DamageTextController>().SetDamageValue(damage); } }
-    private void ShowPlayerDamageText(int damage) { if (playerDamagePrefab != null) { GameObject dt = Instantiate(playerDamagePrefab, playerDamageAnchor); dt.GetComponentInChildren<DamageTextController>().SetDamageValue(damage); } }
-    private void ShuffleDeckIDs() { List<int> deck = dataContainer.playerData.deck; System.Random rng = new System.Random(); int n = deck.Count; while (n > 1) { n--; int k = rng.Next(n + 1); int value = deck[k]; deck[k] = deck[n]; deck[n] = value; } }
+    // --- 既存ロジック ---
+    public void StartBattle() { EnemyData s = EnemyData.GetFixedDataByID(1); if (s != null) dataContainer.enemyData = new EnemyBattleData(s); if (CardManager.Instance != null) { dataContainer.playerData.deck.Clear(); dataContainer.playerData.hand.Clear(); dataContainer.playerData.discardPile.Clear(); dataContainer.playerData.deck.AddRange(CardManager.Instance.mainDeckCardIDs); ShuffleDeckIDs(); } DrawCards(5); StartPlayerTurn(); }
+    private void StartPlayerTurn() { isPlayerTurn = true; currentTurnCount++; if (currentTurnCount > 1) { int r = 5 - dataContainer.playerData.hand.Count; if (r > 0) DrawCards(r); if (dataContainer.playerData.hand.Count < MAX_HAND_SIZE) DrawCards(1); } UpdateUI(); }
+    private void EndTurn() { isPlayerTurn = false; selectedCards.Clear(); UpdateUI(); StartCoroutine(EnemyTurnCoroutine()); }
+    private IEnumerator EnemyTurnCoroutine() { yield return new WaitForSeconds(1.5f); ApplyDamageToPlayer(30); UpdateUI(); CheckGameEnd(); if (dataContainer.playerData.currentHP > 0 && dataContainer.enemyData.currentHP > 0) StartPlayerTurn(); }
+    private void UpdateUI() { if (dataContainer == null) return; if (numberText != null) numberText.text = $"Turn: {currentTurnCount}"; if (playerHPText != null) playerHPText.text = $"{dataContainer.playerData.currentHP} / {dataContainer.playerData.maxHP}"; if (playerHPFillImage != null) playerHPFillImage.fillAmount = (float)dataContainer.playerData.currentHP / dataContainer.playerData.maxHP; if (dataContainer.enemyData != null && dataContainer.enemyData.enemyData != null) { enemyHPText.text = $"{dataContainer.enemyData.currentHP} / {dataContainer.enemyData.enemyData.MaxHP}"; enemyHPFillImage.fillAmount = (float)dataContainer.enemyData.currentHP / dataContainer.enemyData.enemyData.MaxHP; enemyNameText.text = dataContainer.enemyData.enemyData.EnemyName; } RefreshHandVisuals(); if (actionButton != null) actionButton.interactable = (isPlayerTurn && selectedCards.Count > 0); }
+    private void RefreshHandVisuals() { CardUI[] cards = handArea.GetComponentsInChildren<CardUI>(); foreach (CardUI c in cards) { if (selectedCards.Contains(c)) { c.SetAvailableState(true); continue; } if (selectedCards.Count == 0) c.SetAvailableState(true); else { CardData last = selectedCards[selectedCards.Count - 1].GetCardData(); CardData curr = c.GetCardData(); bool connect = (curr.Number == last.Number || curr.Attribute == last.Attribute); c.SetAvailableState(connect); } } }
+    private void DrawCards(int c) { for (int i = 0; i < c; i++) { if (dataContainer.playerData.hand.Count >= MAX_HAND_SIZE) break; if (dataContainer.playerData.deck.Count == 0) { if (dataContainer.playerData.discardPile.Count > 0) { dataContainer.playerData.deck.AddRange(dataContainer.playerData.discardPile); dataContainer.playerData.discardPile.Clear(); ShuffleDeckIDs(); } else break; } int id = dataContainer.playerData.deck[0]; dataContainer.playerData.deck.RemoveAt(0); CardData d = CardManager.Instance.GetCardDataByID(id); dataContainer.playerData.hand.Add(d); if (cardUIPrefab != null && handArea != null) { GameObject obj = Instantiate(cardUIPrefab, handArea); obj.GetComponent<CardUI>().SetupCard(d, this); } } }
+    private void ShuffleDeckIDs() { List<int> d = dataContainer.playerData.deck; System.Random r = new System.Random(); int n = d.Count; while (n > 1) { n--; int k = r.Next(n + 1); int v = d[k]; d[k] = d[n]; d[n] = v; } }
     private void CheckGameEnd() { if (dataContainer.playerData.currentHP <= 0) EndGame("Lose"); else if (dataContainer.enemyData.currentHP <= 0) EndGame("Win"); }
-    private void EndGame(string result) { isPlayerTurn = false; if (gameEndPanel != null) { gameEndPanel.SetActive(true); resultText.text = result; } }
+    private void EndGame(string r) { isPlayerTurn = false; if (gameEndPanel != null) { gameEndPanel.SetActive(true); resultText.text = r; } }
     private void OnEndScreenClicked() { if (sceneLoader != null) sceneLoader.LoadHomeScene(); }
+    public bool OnCardSelected(CardUI c) { if (!isPlayerTurn) return false; CardData n = c.GetCardData(); if (selectedCards.Count > 0) { CardData l = selectedCards[selectedCards.Count - 1].GetCardData(); if (n.Number != l.Number && n.Attribute != l.Attribute) return false; } selectedCards.Add(c); UpdateUI(); return true; }
+    public void OnCardDeselected(CardUI c) { int i = selectedCards.IndexOf(c); if (i != -1) { for (int j = selectedCards.Count - 1; j >= i; j--) { selectedCards[j].ResetPosition(); selectedCards.RemoveAt(j); } } UpdateUI(); }
 }

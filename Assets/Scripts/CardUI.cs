@@ -176,4 +176,20 @@ public class CardUI : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, ID
         if (numberText != null) numberText.enableAutoSizing = true;
         if (effectText != null) effectText.enableAutoSizing = true;
     }
+	
+	/// <summary>
+	/// カードの有効/無効状態に合わせて見た目を変更する
+	/// </summary>
+	/// <param name="isAvailable">選択可能ならtrue</param>
+	public void SetAvailableState(bool isAvailable)
+	{
+		if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
+
+		// 選択可能なカードは不透明(1.0)、不可能なカードは半透明(0.4)にする
+		canvasGroup.alpha = isAvailable ? 1.0f : 0.4f;
+		
+		// 選択できないカードはクリック判定も無効にしたい場合は以下を追加
+		canvasGroup.blocksRaycasts = isAvailable;
+	}
+	
 }
