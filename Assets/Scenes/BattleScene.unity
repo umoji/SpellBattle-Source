@@ -1540,13 +1540,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4fcab17ec7e688e42a0b3e20a0ea5a32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleManager
-  costText: {fileID: 1693147793}
+  numberText: {fileID: 0}
   playerHPText: {fileID: 1496584797}
   enemyHPText: {fileID: 438285354}
   enemyNameText: {fileID: 1048826899}
   playerHPFillImage: {fileID: 368084262}
   enemyHPFillImage: {fileID: 594129015}
-  endTurnButton: {fileID: 2058376111}
+  actionButton: {fileID: 2058376111}
   handArea: {fileID: 1923209031}
   buttonFlasher: {fileID: 2058376114}
   enemyDamagePrefab: {fileID: 8895185817432702868, guid: 022c8a1ea89214a4b87a5002f43cfd4b, type: 3}
@@ -1595,7 +1595,7 @@ MonoBehaviour:
         CardName: 
         visualAssetPath: 
         Attribute: 0
-        Cost: 0
+        Number: 0
         Rarity: 0
         EffectType: 0
         EffectText: 
@@ -1992,7 +1992,7 @@ GameObject:
   - component: {fileID: 2058376111}
   - component: {fileID: 2058376114}
   m_Layer: 5
-  m_Name: EndTurnButton
+  m_Name: BattleStartButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

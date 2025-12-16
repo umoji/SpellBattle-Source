@@ -34,66 +34,44 @@ public class DropZone : MonoBehaviour, IDropHandler
                         // --- Deck DropZone (カードを追加) ---
                         
                         // 1. 同一リスト内ドロップのチェック: 同じリスト内なら並べ替えとみなし、データ操作をスキップ
+                        // ★修正ポイント: GetOriginalParent() を使用
                         if (cardUI.GetOriginalParent() == this.transform)
                         {
                             cardUI.transform.SetParent(this.transform, false);
                             Debug.Log("Card dropped within the same DeckZone. Skipping data add.");
-                            success = true; // 見た目の移動は成功
+                            success = true; 
                         }
                         // 外部リストからのドロップの場合のみ、追加処理を行う
                         else if (CardManager.Instance.mainDeckCardIDs.Count < CardManager.Instance.deckSizeLimit)
                         {
-                            // 【★修正ポイント 1: 在庫チェック★】
                             // 所持数が1以上あるか確認
                             if (CardManager.Instance.GetCardCount(droppedCardData.CardID) > 0)
                             {
                                 // データの追加
                                 CardManager.Instance.mainDeckCardIDs.Add(droppedCardData.CardID);
                                 
-                                // 【★修正ポイント 2: 在庫消費 (-1)★】
+                                // 在庫消費 (-1)
                                 CardManager.Instance.ChangeCardCount(droppedCardData.CardID, -1);
                                 
-                                // 見た目の移動 (成功した場合のみ)
+                                // 見た目の移動
                                 cardUI.transform.SetParent(this.transform, false);
                                 
-                                Debug.Log($"Card ID {droppedCardData.CardID} added to mainDeckCardIDs. New owned count: {CardManager.Instance.GetCardCount(droppedCardData.CardID)}");
+                                // ★重要: 新しい親を記憶させる
+                                cardUI.SetOriginalParent(this.transform);
+                                
+                                Debug.Log($"Card ID {droppedCardData.CardID} added to deck. Owned: {CardManager.Instance.GetCardCount(droppedCardData.CardID)}");
                                 success = true;
                             }
                             else
                             {
-                                // 在庫がない場合は拒否
-                                Debug.LogWarning($"Card ID {droppedCardData.CardID} has 0 owned count. Cannot add to deck. Returning card to original position.");
-                                
-                                // 元の位置に戻す処理
-                                Transform originalParent = cardUI.GetOriginalParent();
-                                int originalIndex = cardUI.GetOriginalIndex();
-                                
-                                if (cardRect != null && originalParent != null)
-                                {
-                                    cardRect.SetParent(originalParent); 
-                                    cardRect.SetSiblingIndex(originalIndex); 
-                                    LayoutRebuilder.ForceRebuildLayoutImmediate(originalParent.GetComponent<RectTransform>());
-                                }
-                                // success は false のまま
+                                Debug.LogWarning("在庫がないため追加できません。");
+                                ReturnToOriginalPosition(cardUI, cardRect);
                             }
                         }
                         else
                         {
-                            // デッキ上限超過時、元の位置に戻す
-                            Debug.LogWarning($"Deck size limit reached ({CardManager.Instance.deckSizeLimit}). Card returned to its original position.");
-                            
-                            Transform originalParent = cardUI.GetOriginalParent();
-                            int originalIndex = cardUI.GetOriginalIndex();
-                            
-                            if (cardRect != null && originalParent != null)
-                            {
-                                cardRect.SetParent(originalParent); // 元の親に戻す
-                                cardRect.SetSiblingIndex(originalIndex); // 元のインデックスに戻す
-                                
-                                // 元の親のレイアウトを更新
-                                LayoutRebuilder.ForceRebuildLayoutImmediate(originalParent.GetComponent<RectTransform>());
-                            }
-                            // success は false のまま
+                            Debug.LogWarning("デッキ上限超過です。");
+                            ReturnToOriginalPosition(cardUI, cardRect);
                         }
                     }
                     else if (zoneType == DropZoneType.Collection)
@@ -101,71 +79,62 @@ public class DropZone : MonoBehaviour, IDropHandler
                         // --- Collection DropZone (カードを削除) ---
                         if (CardManager.Instance.mainDeckCardIDs.Remove(droppedCardData.CardID))
                         {
-                            // 所持カード数を +1 する (在庫の返却)
+                            // 在庫の返却 (+1)
                             CardManager.Instance.ChangeCardCount(droppedCardData.CardID, 1);
                             
-                            // データ削除成功時のゲームオブジェクト破棄
+                            // デッキから外す場合はオブジェクトを破却（コレクション側は自動更新されるため）
                             Destroy(droppedObject); 
                             
-                            Debug.Log($"Card ID {droppedCardData.CardID} removed from mainDeckCardIDs. New owned count: {CardManager.Instance.GetCardCount(droppedCardData.CardID)}");
+                            Debug.Log($"Card ID {droppedCardData.CardID} removed from deck.");
                             success = true;
                         }
                         else
                         {
-                            Debug.LogWarning($"Card ID {droppedCardData.CardID} not found in deck to remove.");
-                            
-                            // 削除失敗時（2回目のドラッグなど）は、元の位置に戻す
-                            Transform originalParent = cardUI.GetOriginalParent();
-                            int originalIndex = cardUI.GetOriginalIndex();
-                            
-                            if (cardRect != null && originalParent != null)
-                            {
-                                cardRect.SetParent(originalParent); // 元の親に戻す
-                                cardRect.SetSiblingIndex(originalIndex); // 元のインデックスに戻す
-                                
-                                // 元の親のレイアウトを更新
-                                LayoutRebuilder.ForceRebuildLayoutImmediate(originalParent.GetComponent<RectTransform>());
-                            }
+                            ReturnToOriginalPosition(cardUI, cardRect);
                         }
                     }
                     
                     if (success)
                     {
-                        // データ操作に成功した場合のみ位置をリセット
                         if(cardRect != null)
                         {
                             cardRect.anchoredPosition = Vector2.zero; 
                         }
 
-                        // 両リストの再描画
+                        // UIの再描画
                         InventoryUIController inventoryController = FindObjectOfType<InventoryUIController>();
-                        
                         if (inventoryController != null)
                         {
                             inventoryController.DisplayDeckCards(); 
-                            inventoryController.DisplayAllCards(); // コレクションも更新
+                            inventoryController.DisplayAllCards(); 
                             inventoryController.UpdateDeckCountUI();
-                        }
-                        else 
-                        {
-                            DeckCountUI deckCountUI = FindObjectOfType<DeckCountUI>();
-                            if (deckCountUI != null)
-                            {
-                                deckCountUI.UpdateDeckCount();
-                            }
                         }
                     }
                 }
                 
-                // 5. 親要素のレイアウトを強制的に再計算させる
+                // 親要素のレイアウトを強制的に再計算
                 RectTransform parentRect = GetComponent<RectTransform>();
-                if (parentRect != null && (GetComponent<LayoutGroup>() != null || GetComponentInParent<LayoutGroup>() != null))
+                if (parentRect != null)
                 {
                     LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
                 }
-                
-                Debug.Log($"Card dropped onto DropZone: {gameObject.name}");
             }
+        }
+    }
+
+    /// <summary>
+    /// ドロップ失敗時にカードを元の親と位置に戻す
+    /// </summary>
+    private void ReturnToOriginalPosition(CardUI cardUI, RectTransform cardRect)
+    {
+        Transform originalParent = cardUI.GetOriginalParent();
+        int originalIndex = cardUI.GetOriginalIndex();
+        
+        if (cardRect != null && originalParent != null)
+        {
+            cardRect.SetParent(originalParent); 
+            cardRect.SetSiblingIndex(originalIndex); 
+            LayoutRebuilder.ForceRebuildLayoutImmediate(originalParent.GetComponent<RectTransform>());
         }
     }
 }

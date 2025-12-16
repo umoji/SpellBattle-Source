@@ -2306,7 +2306,7 @@ MonoBehaviour:
   closeResultButton: {fileID: 1092336098}
   drawAgainButton: {fileID: 638593527}
   cardUIPrefab: {fileID: 3826272908079802373, guid: deaf5d6c2b0f42f4fb14a699b075ce72, type: 3}
-  gachaResultCardPrefab: {fileID: 3826272908079802373, guid: bb6148f40decce04a8711f52423db0ca, type: 3}
+  gachaResultCardPrefab: {fileID: 3826272908079802373, guid: c48180bae3152cf4f8d91cd9cc9fd4ac, type: 3}
   cardDisplayParent: {fileID: 1890221277}
 --- !u!4 &1515451269
 Transform:
