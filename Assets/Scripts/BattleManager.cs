@@ -19,6 +19,14 @@ public class BattleManager : MonoBehaviour
     public RectTransform handArea; 
     public Transform damageTextParent; 
 
+    [Header("Combo Display UI (Left Side)")]
+    // ★看板画像（親）のRectTransform
+    public RectTransform baseDamagePanel; 
+    public RectTransform multiplierPanel;
+    // ★表示するテキスト（子）
+    public TextMeshProUGUI totalBaseDamageText;   
+    public TextMeshProUGUI totalMultiplierText;   
+
     [Header("Animation References")]
     public GameObject enemyDamagePrefab;   
     public GameObject playerDamagePrefab;  
@@ -45,9 +53,23 @@ public class BattleManager : MonoBehaviour
     private const int MAX_HAND_SIZE = 10; 
 
     [Header("Combo Settings")]
-    public float comboMultiplier = 1.5f; 
-    // オレンジ色の定義（R=1, G=0.5, B=0）
-    private Color comboColor = new Color(1.0f, 0.5f, 0.0f);
+    public float bonusPerComboCard = 0.5f; 
+    public Color normalColor = Color.white;        
+    public Color midComboColor = new Color(1f, 0.6f, 0f); 
+    public Color maxComboColor = new Color(1f, 0.2f, 0f); 
+
+    [Header("Shake Settings")]
+    public float shakeDuration = 0.15f; 
+    public float baseShakeMagnitude = 5.0f; 
+    public float maxShakeMagnitude = 30.0f; 
+
+    [Header("Text Size Settings")]
+    public float minFontSize = 80f;   
+    public float maxFontSize = 150f;
+
+    // ★看板の元の位置
+    private Vector3 basePanelOriginPos;
+    private Vector3 multiPanelOriginPos;
 
     void Start()
     {
@@ -56,6 +78,12 @@ public class BattleManager : MonoBehaviour
         if (gameEndPanel != null) gameEndPanel.SetActive(false);
         if (returnToHomeButton != null) returnToHomeButton.onClick.AddListener(OnEndScreenClicked);
         
+        // ★看板の元の位置を記憶
+        if (baseDamagePanel != null) basePanelOriginPos = baseDamagePanel.localPosition;
+        if (multiplierPanel != null) multiPanelOriginPos = multiplierPanel.localPosition;
+
+        UpdateComboUI(0, 1.0f);
+
         if (actionButton != null)
         {
             actionButton.onClick.AddListener(ExecutePlayerAttack);
@@ -77,7 +105,9 @@ public class BattleManager : MonoBehaviour
         isPlayerTurn = false; 
         actionButton.interactable = false;
 
-        float totalDamageFloat = 0;
+        int accumulatedBaseDamage = 0;   
+        float accumulatedMultiplier = 1.0f; 
+
         List<GameObject> cardsToRemove = new List<GameObject>();
         List<DamageTextController> activeDamageTexts = new List<DamageTextController>();
 
@@ -89,10 +119,11 @@ public class BattleManager : MonoBehaviour
         {
             CardUI cardUI = selectedCards[i];
             CardData currentCard = cardUI.GetCardData();
-            int baseCardDamage = currentCard.Number * 10;
-            float currentMultiplier = 1.0f;
-            bool isCombo = false;
+            
+            int cardBase = currentCard.Number * 10;
+            accumulatedBaseDamage += cardBase;
 
+            bool isCombo = false;
             if (lastCard != null)
             {
                 if (currentCard.Number == lastCard.Number) consecutiveNumbers++;
@@ -103,39 +134,31 @@ public class BattleManager : MonoBehaviour
 
                 if (consecutiveNumbers >= 3 || consecutiveAttributes >= 3)
                 {
-                    currentMultiplier = comboMultiplier;
+                    accumulatedMultiplier += bonusPerComboCard;
                     isCombo = true;
                 }
             }
 
-            int finalCardDamage = Mathf.RoundToInt(baseCardDamage * currentMultiplier);
-            totalDamageFloat += finalCardDamage;
+            UpdateComboUI(accumulatedBaseDamage, accumulatedMultiplier);
 
-            // ★修正：コンボ中ならオレンジ、通常なら白を指定
-            Color dColor = isCombo ? comboColor : Color.white;
-
-            // 1. ダメージテキストを表示（色を指定）
-            GameObject dtObj = ShowTextAtTargetPerfectly(enemyDamagePrefab, cardUI.transform, finalCardDamage.ToString(), dColor, false); 
+            Color currentColor = GetComboColor(accumulatedMultiplier);
+            GameObject dtObj = ShowTextAtTargetPerfectly(enemyDamagePrefab, cardUI.transform, cardBase.ToString(), currentColor, false); 
             if (dtObj != null)
             {
                 DamageTextController ctrl = dtObj.GetComponentInChildren<DamageTextController>();
                 if (ctrl != null) activeDamageTexts.Add(ctrl);
             }
 
-            // 2. コンボ中なら倍率テキストを表示
-			if (isCombo && multiplierTextPrefab != null)
-			{
-				// 倍率テキストを表示
-				GameObject multiObj = ShowTextAtTargetPerfectly(multiplierTextPrefab, cardUI.transform, $"x{currentMultiplier}!!", comboColor, true);
-				if (multiObj != null)
-				{
-					// ① 位置をさらに上に（50f を 80f などに増やす）
-					multiObj.transform.localPosition += new Vector3(0, 80f, 0);
-
-					// ② 軽く斜めにする（Z軸を 15度 ほど傾ける）
-					multiObj.transform.localRotation = Quaternion.Euler(0, 0, 15f);
-				}
-			}
+            if (isCombo && multiplierTextPrefab != null)
+            {
+                GameObject multiObj = ShowTextAtTargetPerfectly(multiplierTextPrefab, cardUI.transform, $"+{bonusPerComboCard}", currentColor, true);
+                if (multiObj != null)
+                {
+                    multiObj.transform.localPosition += new Vector3(0, 80f, 0);
+                    multiObj.transform.localRotation = Quaternion.Euler(0, 0, 15f);
+                    multiObj.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+                }
+            }
 
             CanvasGroup cg = cardUI.GetComponent<CanvasGroup>();
             if (cg != null) cg.alpha = 0; 
@@ -145,31 +168,109 @@ public class BattleManager : MonoBehaviour
                 dataContainer.playerData.discardPile.Add(currentCard.CardID);
 
             lastCard = currentCard;
-            yield return new WaitForSeconds(0.25f);
+            yield return new WaitForSeconds(0.8f); 
         }
 
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.9f); 
 
-        foreach (var dt in activeDamageTexts)
-        {
-            if (dt != null) dt.DestroyWithFade();
-        }
+        foreach (var dt in activeDamageTexts) if (dt != null) dt.DestroyWithFade();
         yield return new WaitForSeconds(0.2f);
-
         foreach (var cardObj in cardsToRemove) Destroy(cardObj);
 
-        ApplyDamageToEnemy(Mathf.RoundToInt(totalDamageFloat));
+		int finalDamage = Mathf.RoundToInt(accumulatedBaseDamage * accumulatedMultiplier);
+        Color finalComboColor = GetComboColor(accumulatedMultiplier);
 
+        // 敵に巨大な数字でダメージを叩き込む
+        ApplyDamageToEnemy(finalDamage, finalComboColor);
+
+        UpdateComboUI(0, 1.0f);
         selectedCards.Clear();
         UpdateUI();
-        EndTurn();
+		if (dataContainer.enemyData.currentHP > 0)
+        {
+            EndTurn(); // 敵のターンへ
+        }
+        else
+        {
+            // 敵のHPが0なら、EndTurnを呼ばずにここでCheckGameEndを実行
+			yield return new WaitForSeconds(1.0f);
+            CheckGameEnd(); 
+        }
     }
 
-    // ★色(textColor)を受け取れるように拡張
+    private Color GetComboColor(float multiplier)
+    {
+        if (multiplier <= 1.0f) return normalColor;
+        float t = Mathf.InverseLerp(1.0f, 2.0f, multiplier);
+        if (t < 0.5f) return Color.Lerp(normalColor, midComboColor, t * 2f);
+        else return Color.Lerp(midComboColor, maxComboColor, (t - 0.5f) * 2f);
+    }
+
+    // ★看板ごと揺れるように修正
+    private void UpdateComboUI(int baseDmg, float multi)
+    {
+		Color currentColor = GetComboColor(multi);
+        float t = Mathf.InverseLerp(1.0f, 2.0f, multi);
+        float currentFontSize = Mathf.Lerp(minFontSize, maxFontSize, t);
+        float currentShakeMag = Mathf.Lerp(baseShakeMagnitude, maxShakeMagnitude, t);
+
+        if (totalBaseDamageText != null) 
+        {
+            totalBaseDamageText.text = baseDmg.ToString(); 
+            totalBaseDamageText.color = currentColor;
+            totalBaseDamageText.fontSize = currentFontSize;
+            
+            // ★看板（親）を揺らす
+            if(baseDmg > 0 && baseDamagePanel != null) 
+                StartCoroutine(ShakeUI(baseDamagePanel, basePanelOriginPos, currentShakeMag));
+        }
+        
+        if (totalMultiplierText != null) 
+        {
+            totalMultiplierText.text = $"x{multi:F1}";
+            totalMultiplierText.color = currentColor;
+            totalMultiplierText.fontSize = currentFontSize;
+            
+            // ★看板（親）を揺らす
+            if(multi > 1.0f && multiplierPanel != null) 
+                StartCoroutine(ShakeUI(multiplierPanel, multiPanelOriginPos, currentShakeMag));
+        }
+    }
+
+	private IEnumerator ShakeUI(RectTransform target, Vector3 originPos, float magnitude)
+    {
+        float elapsed = 0f;
+        
+        // --- 膨らむ演出の準備 ---
+        // 1.1倍にセット（加算された瞬間のインパクト）
+        Vector3 punchScale = new Vector3(1.15f, 1.15f, 1.15f); 
+        target.localScale = punchScale;
+
+        while (elapsed < shakeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float percent = elapsed / shakeDuration;
+
+            // 1. シェイク処理（ランダムな揺れ）
+            float x = UnityEngine.Random.Range(-1f, 1f) * magnitude;
+            float y = UnityEngine.Random.Range(-1f, 1f) * magnitude;
+            target.localPosition = originPos + new Vector3(x, y, 0);
+
+            // 2. スケール処理（1.15倍から1.0倍へ滑らかに戻していく）
+            // Lerpを使って、時間の経過とともに元のサイズ(Vector3.one)に戻す
+            target.localScale = Vector3.Lerp(punchScale, Vector3.one, percent);
+
+            yield return null;
+        }
+
+        // 最後は必ず元の位置とサイズにぴたっと戻す
+        target.localPosition = originPos;
+        target.localScale = Vector3.one;
+    }
+
     private GameObject ShowTextAtTargetPerfectly(GameObject prefab, Transform targetTransform, string textValue, Color textColor, bool autoDestroy)
     {
         if (prefab == null || targetTransform == null) return null;
-        
         GameObject inst = Instantiate(prefab);
         inst.transform.position = targetTransform.position;
         inst.transform.SetParent(damageTextParent, true);
@@ -177,34 +278,49 @@ public class BattleManager : MonoBehaviour
         Vector3 lp = inst.transform.localPosition;
         lp.z = 0;
         inst.transform.localPosition = lp;
-
-        // テキストコンポーネントを取得して内容と色をセット
         TextMeshProUGUI textComp = inst.GetComponentInChildren<TextMeshProUGUI>();
-        if (textComp != null)
-        {
-            textComp.text = textValue;
-            textComp.color = textColor; // ★ここで色を変更！
-        }
-
+        if (textComp != null) { textComp.text = textValue; textComp.color = textColor; }
         DamageTextController controller = inst.GetComponentInChildren<DamageTextController>();
-        if (controller != null)
-        {
-            controller.autoDestroy = autoDestroy; 
-        }
+        if (controller != null) controller.autoDestroy = autoDestroy; 
         return inst;
     }
 
-    private void ApplyDamageToEnemy(int damage) 
+	private void ApplyDamageToEnemy(int damage, Color comboColor) 
     { 
         if (dataContainer.enemyData != null) 
         { 
             dataContainer.enemyData.currentHP -= damage; 
             if (dataContainer.enemyData.currentHP < 0) dataContainer.enemyData.currentHP = 0; 
+            
             if (enemyAnimator != null) enemyAnimator.PlayHitAnimation(); 
+            
             if (enemyDamageAnchor != null)
             {
-                // 敵へのダメージ（最終ダメージ）は白で表示（コンボ時はここもオレンジにしたい場合は変えられます）
-                ShowTextAtTargetPerfectly(enemyDamagePrefab, enemyDamageAnchor, damage.ToString(), Color.white, true);
+                GameObject dtObj = ShowTextAtTargetPerfectly(enemyDamagePrefab, enemyDamageAnchor, damage.ToString(), comboColor, true);
+                if (dtObj != null)
+                {
+                    TextMeshProUGUI textComp = dtObj.GetComponentInChildren<TextMeshProUGUI>();
+                    if (textComp != null)
+                    {
+                        // 1. 改行を絶対にさせない
+                        textComp.enableWordWrapping = false;
+
+                        // 2. 自動サイズ調整をオンにする
+                        textComp.enableAutoSizing = true;
+                        
+                        // 3. 最小サイズと最大サイズを指定
+                        // 文字数が多くなってもこの最小値(40)までは自動で縮んで表示を維持します
+                        textComp.fontSizeMin = 40; 
+                        textComp.fontSizeMax = maxFontSize * 1.5f;
+
+                        // 4. 配置の微調整
+                        textComp.alignment = TextAlignmentOptions.Center;
+                        textComp.fontStyle = FontStyles.Bold;
+                    }
+                    
+                    // 表示位置が敵と被らないよう、少し上にオフセット
+                    dtObj.transform.localPosition += new Vector3(0, 100f, 0);
+                }
             }
         } 
     }
@@ -216,13 +332,10 @@ public class BattleManager : MonoBehaviour
             dataContainer.playerData.currentHP -= d; 
             if (dataContainer.playerData.currentHP < 0) dataContainer.playerData.currentHP = 0; 
             if (playerDamagePrefab != null && playerDamageAnchor != null) 
-            { 
                 ShowTextAtTargetPerfectly(playerDamagePrefab, playerDamageAnchor, d.ToString(), Color.white, true); 
-            } 
         } 
     }
 
-    // --- 既存ロジック ---
     public void StartBattle() { EnemyData s = EnemyData.GetFixedDataByID(1); if (s != null) dataContainer.enemyData = new EnemyBattleData(s); if (CardManager.Instance != null) { dataContainer.playerData.deck.Clear(); dataContainer.playerData.hand.Clear(); dataContainer.playerData.discardPile.Clear(); dataContainer.playerData.deck.AddRange(CardManager.Instance.mainDeckCardIDs); ShuffleDeckIDs(); } DrawCards(5); StartPlayerTurn(); }
     private void StartPlayerTurn() { isPlayerTurn = true; currentTurnCount++; if (currentTurnCount > 1) { int r = 5 - dataContainer.playerData.hand.Count; if (r > 0) DrawCards(r); if (dataContainer.playerData.hand.Count < MAX_HAND_SIZE) DrawCards(1); } UpdateUI(); }
     private void EndTurn() { isPlayerTurn = false; selectedCards.Clear(); UpdateUI(); StartCoroutine(EnemyTurnCoroutine()); }

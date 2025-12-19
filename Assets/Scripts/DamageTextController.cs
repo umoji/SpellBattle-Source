@@ -63,18 +63,25 @@ public class DamageTextController : MonoBehaviour
     }
 
     // スケールアニメーションのコルーチン（元のコードに必要と思われるため追加）
-    private IEnumerator ScaleAnimation()
-    {
-        Vector3 originalScale = transform.localScale;
-        float t = 0;
-        while (t < scaleUpDuration)
-        {
-            t += Time.deltaTime;
-            transform.localScale = Vector3.Lerp(originalScale, originalScale * maxScale, t / scaleUpDuration);
-            yield return null;
-        }
-        transform.localScale = originalScale;
-    }
+	private IEnumerator ScaleAnimation()
+	{
+		// 開始時のサイズを 0 にして、消えている状態からスタート
+		Vector3 originalScale = transform.localScale;
+		transform.localScale = Vector3.zero; 
+
+		float t = 0;
+		// scaleUpDuration（0.1秒くらい）で一気に大きくする
+		while (t < scaleUpDuration)
+		{
+			t += Time.deltaTime;
+			// 少し目標サイズ（maxScale）を通り過ぎてから戻るような動きにすると「シュパッ」と見えます
+			float progress = t / scaleUpDuration;
+			transform.localScale = Vector3.Lerp(Vector3.zero, originalScale * maxScale, progress);
+			yield return null;
+		}
+		// 最後に本来のサイズにピタッと合わせる
+		transform.localScale = originalScale;
+	}
 
     private IEnumerator DelayedDestroy()
     {
