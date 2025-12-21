@@ -230,51 +230,160 @@ public class BattleManager : MonoBehaviour
 
     // --- その他、以前からある全メソッドをそのまま含めてください ---
     public void ExecutePlayerAttack() { if (selectedCards.Count == 0 || !isPlayerTurn) return; StartCoroutine(ComboAttackRoutine()); }
-    private IEnumerator ComboAttackRoutine() { /* 以前のロジックそのまま */ 
-        isPlayerTurn = false; actionButton.interactable = false;
-        int accumulatedBaseDamage = 0; float accumulatedMultiplier = 1.0f;
-        List<GameObject> cardsToRemove = new List<GameObject>();
-        List<DamageTextController> activeDamageTexts = new List<DamageTextController>();
-        int consecutiveNumbers = 1; int consecutiveAttributes = 1; CardData lastCard = null;
+	
+	private IEnumerator ComboAttackRoutine() 
+	{ 
+		isPlayerTurn = false; 
+		actionButton.interactable = false;
 
-        for (int i = 0; i < selectedCards.Count; i++) {
-            CardUI cardUI = selectedCards[i]; CardData currentCard = cardUI.GetCardData();
-            int cardBase = currentCard.Number * 10; accumulatedBaseDamage += cardBase;
-            bool isCombo = false;
-            if (lastCard != null) {
-                if (currentCard.Number == lastCard.Number) consecutiveNumbers++; else consecutiveNumbers = 1;
-                if (currentCard.Attribute == lastCard.Attribute) consecutiveAttributes++; else consecutiveAttributes = 1;
-                if (consecutiveNumbers >= 3 || consecutiveAttributes >= 3) { accumulatedMultiplier += bonusPerComboCard; isCombo = true; }
-            }
-            UpdateComboUI(accumulatedBaseDamage, accumulatedMultiplier);
-            RectTransform cardRect = cardUI.GetComponent<RectTransform>();
-            if (cardRect != null) StartCoroutine(ShakeCardUI(cardRect, baseShakeMagnitude * accumulatedMultiplier));
-            Color currentColor = GetComboColor(accumulatedMultiplier);
-            GameObject dtObj = ShowTextAtTargetPerfectly(enemyDamagePrefab, cardUI.transform, cardBase.ToString(), currentColor, false);
-            if (dtObj != null) { dtObj.transform.localPosition += new Vector3(0, 120f, 0); DamageTextController ctrl = dtObj.GetComponentInChildren<DamageTextController>(); if (ctrl != null) activeDamageTexts.Add(ctrl); }
-            if (isCombo && multiplierTextPrefab != null) {
-                GameObject multiObj = ShowTextAtTargetPerfectly(multiplierTextPrefab, cardUI.transform, $"+{bonusPerComboCard}", currentColor, true);
-                if (multiObj != null) { multiObj.transform.localPosition += new Vector3(0, 200f, 0); multiObj.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f); }
-            }
-            cardsToRemove.Add(cardUI.gameObject);
-            if (dataContainer.playerData.hand.Remove(currentCard)) dataContainer.playerData.discardPile.Add(currentCard.CardID);
-            lastCard = currentCard; yield return new WaitForSeconds(0.9f);
-        }
-        yield return new WaitForSeconds(0.8f);
-        foreach (var dt in activeDamageTexts) if (dt != null) dt.DestroyWithFade();
-        yield return new WaitForSeconds(0.2f);
-        foreach (var cardObj in cardsToRemove) Destroy(cardObj);
-        int finalDamage = Mathf.RoundToInt(accumulatedBaseDamage * accumulatedMultiplier);
-        ApplyDamageToEnemy(finalDamage, GetComboColor(accumulatedMultiplier));
-        UpdateComboUI(0, 1.0f); selectedCards.Clear(); UpdateUI();
-        if (dataContainer.enemyData.currentHP > 0) EndTurn(); else { yield return new WaitForSeconds(1.0f); CheckGameEnd(); }
-    }
+		int accumulatedBaseDamage = 0; 
+		float accumulatedMultiplier = 1.0f;
+		
+		List<GameObject> cardsToRemove = new List<GameObject>();
+		// ★追加：表示中のダメージテキストを管理するリスト
+		List<DamageTextController> activeDamageTexts = new List<DamageTextController>();
+		
+		int consecutiveNumbers = 1; 
+		int consecutiveAttributes = 1; 
+		CardData lastCard = null;
+
+		// --- 1枚ずつのコンボ処理 ---
+		for (int i = 0; i < selectedCards.Count; i++) 
+		{
+			CardUI cardUI = selectedCards[i]; 
+			CardData currentCard = cardUI.GetCardData();
+			int cardBase = currentCard.Number * 10; 
+			accumulatedBaseDamage += cardBase;
+			
+			bool isCombo = false;
+			if (lastCard != null) {
+				if (currentCard.Number == lastCard.Number) consecutiveNumbers++; else consecutiveNumbers = 1;
+				if (currentCard.Attribute == lastCard.Attribute) consecutiveAttributes++; else consecutiveAttributes = 1;
+				if (consecutiveNumbers >= 3 || consecutiveAttributes >= 3) { accumulatedMultiplier += bonusPerComboCard; isCombo = true; }
+			}
+
+			UpdateComboUI(accumulatedBaseDamage, accumulatedMultiplier);
+			
+			RectTransform cardRect = cardUI.GetComponent<RectTransform>();
+			if (cardRect != null) StartCoroutine(ShakeCardUI(cardRect, baseShakeMagnitude * accumulatedMultiplier));
+
+			Color currentColor = GetComboColor(accumulatedMultiplier);
+
+			// ★修正：autoDestroyを false にし、リストに追加する
+			GameObject dtObj = ShowTextAtTargetPerfectly(enemyDamagePrefab, cardUI.transform, cardBase.ToString(), currentColor, false); // ★ここを false に
+			if (dtObj != null) 
+			{ 
+				dtObj.transform.localPosition += new Vector3(0, 120f, 0); 
+				DamageTextController ctrl = dtObj.GetComponentInChildren<DamageTextController>(); 
+				if (ctrl != null) 
+				{
+					// リストに入れて後でまとめて消す準備
+					activeDamageTexts.Add(ctrl); 
+				}
+			}
+
+			// コンボボーナス表示も同様に溜めておく場合（任意で調整してください）
+			if (isCombo && multiplierTextPrefab != null) {
+				GameObject multiObj = ShowTextAtTargetPerfectly(multiplierTextPrefab, cardUI.transform, $"+{bonusPerComboCard}", currentColor, false);
+				if (multiObj != null) { 
+					multiObj.transform.localPosition += new Vector3(0, 200f, 0); 
+					multiObj.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+					DamageTextController mCtrl = multiObj.GetComponentInChildren<DamageTextController>();
+					if (mCtrl != null) activeDamageTexts.Add(mCtrl);
+				}
+			}
+
+			cardsToRemove.Add(cardUI.gameObject);
+			if (dataContainer.playerData.hand.Remove(currentCard)) dataContainer.playerData.discardPile.Add(currentCard.CardID);
+			
+			lastCard = currentCard; 
+			yield return new WaitForSeconds(0.9f); // 1枚ごとの待機時間
+		}
+
+		// --- 全カード出し終わった後の溜め時間 ---
+		yield return new WaitForSeconds(0.5f); 
+
+		// ★修正：溜めていたダメージテキストをまとめてフェードアウトさせて消す
+		foreach (var dt in activeDamageTexts) 
+		{
+			if (dt != null) dt.DestroyWithFade(); 
+		}
+		
+		// フェードアウトを待つわずかな時間
+		yield return new WaitForSeconds(0.3f); 
+
+		// カードオブジェクト自体の削除
+		foreach (var cardObj in cardsToRemove) Destroy(cardObj);
+
+		// --- 最終ダメージの適用 ---
+		int finalDamage = Mathf.RoundToInt(accumulatedBaseDamage * accumulatedMultiplier);
+		ApplyDamageToEnemy(finalDamage, GetComboColor(accumulatedMultiplier));
+
+		// UIリセットとターン終了処理
+		UpdateComboUI(0, 1.0f); 
+		selectedCards.Clear(); 
+		UpdateUI();
+
+		if (dataContainer.enemyData.currentHP > 0) EndTurn(); 
+		else { yield return new WaitForSeconds(1.0f); CheckGameEnd(); }
+	}
 
     private IEnumerator ShakeCardUI(RectTransform target, float magnitude) { if (target == null) yield break; Vector3 originalPos = target.localPosition; float elapsed = 0f; Vector3 punchScale = new Vector3(1.1f, 1.1f, 1.1f); target.localScale = punchScale; while (elapsed < shakeDuration) { elapsed += Time.deltaTime; float percent = elapsed / shakeDuration; float x = UnityEngine.Random.Range(-1f, 1f) * magnitude; float y = UnityEngine.Random.Range(-1f, 1f) * magnitude; target.localPosition = originalPos + new Vector3(x, y, 0); target.localScale = Vector3.Lerp(punchScale, Vector3.one, percent); yield return null; } target.localPosition = originalPos; target.localScale = Vector3.one; }
     private Color GetComboColor(float multiplier) { if (multiplier <= 1.0f) return normalColor; float t = Mathf.InverseLerp(1.0f, 2.0f, multiplier); if (t < 0.5f) return Color.Lerp(normalColor, midComboColor, t * 2f); else return Color.Lerp(midComboColor, maxComboColor, (t - 0.5f) * 2f); }
     private void UpdateComboUI(int baseDmg, float multi) { Color currentColor = GetComboColor(multi); float t = Mathf.InverseLerp(1.0f, 2.0f, multi); float currentFontSize = Mathf.Lerp(minFontSize, maxFontSize, t); float currentShakeMag = Mathf.Lerp(baseShakeMagnitude, maxShakeMagnitude, t); if (totalBaseDamageText != null) { totalBaseDamageText.text = baseDmg.ToString(); totalBaseDamageText.color = currentColor; totalBaseDamageText.fontSize = currentFontSize; if(baseDmg > 0 && baseDamagePanel != null) StartCoroutine(ShakeUI(baseDamagePanel, basePanelOriginPos, currentShakeMag)); } if (totalMultiplierText != null) { totalMultiplierText.text = $"x{multi:F1}"; totalMultiplierText.color = currentColor; totalMultiplierText.fontSize = currentFontSize; if(multi > 1.0f && multiplierPanel != null) StartCoroutine(ShakeUI(multiplierPanel, multiPanelOriginPos, currentShakeMag)); } }
     private IEnumerator ShakeUI(RectTransform target, Vector3 originPos, float magnitude) { float elapsed = 0f; Vector3 punchScale = new Vector3(1.15f, 1.15f, 1.15f); target.localScale = punchScale; while (elapsed < shakeDuration) { elapsed += Time.deltaTime; float percent = elapsed / shakeDuration; float x = UnityEngine.Random.Range(-1f, 1f) * magnitude; float y = UnityEngine.Random.Range(-1f, 1f) * magnitude; target.localPosition = originPos + new Vector3(x, y, 0); target.localScale = Vector3.Lerp(punchScale, Vector3.one, percent); yield return null; } target.localPosition = originPos; target.localScale = Vector3.one; }
-    private GameObject ShowTextAtTargetPerfectly(GameObject prefab, Transform targetTransform, string textValue, Color textColor, bool autoDestroy) { if (prefab == null || targetTransform == null) return null; GameObject inst = Instantiate(prefab); inst.transform.position = targetTransform.position; inst.transform.SetParent(damageTextParent, true); inst.transform.localScale = Vector3.one; Vector3 lp = inst.transform.localPosition; lp.z = 0; inst.transform.localPosition = lp; TextMeshProUGUI textComp = inst.GetComponentInChildren<TextMeshProUGUI>(); if (textComp != null) { textComp.text = textValue; textComp.color = textColor; } DamageTextController controller = inst.GetComponentInChildren<DamageTextController>(); if (controller != null) controller.autoDestroy = autoDestroy; return inst; }
+
+	private GameObject ShowTextAtTargetPerfectly(GameObject prefab, Transform targetTransform, string textValue, Color textColor, bool autoDestroy) 
+	{ 
+		if (prefab == null || targetTransform == null || damageTextParent == null) return null; 
+
+		// 1. 生成して即座に親を設定
+		GameObject inst = Instantiate(prefab, damageTextParent); 
+		RectTransform rect = inst.GetComponent<RectTransform>();
+
+		// 2. カメラの取得
+		Camera cam = Camera.main; 
+		Vector2 localPos;
+
+		if (cam != null)
+		{
+			Vector3 screenPos = cam.WorldToScreenPoint(targetTransform.position);
+			RectTransformUtility.ScreenPointToLocalPointInRectangle(
+				damageTextParent as RectTransform, 
+				screenPos, 
+				cam, 
+				out localPos
+			);
+		}
+		else
+		{
+			localPos = Vector2.zero;
+		}
+
+		// 3. 座標の適用
+		rect.anchoredPosition = localPos;
+		rect.localPosition = new Vector3(rect.localPosition.x, rect.localPosition.y, 0f);
+		rect.localScale = Vector3.one;
+		rect.localRotation = Quaternion.identity;
+
+		// 4. テキストの設定
+		TextMeshProUGUI textComp = inst.GetComponentInChildren<TextMeshProUGUI>(); 
+		if (textComp != null) { 
+			textComp.text = textValue; 
+			textComp.color = textColor; 
+		} 
+
+		// ★追加：DamageTextController への設定反映
+		// これにより、Prefab側でチェックが入っていてもコードからの指示(false)が優先されます
+		DamageTextController controller = inst.GetComponentInChildren<DamageTextController>();
+		if (controller != null)
+		{
+			controller.autoDestroy = autoDestroy;
+		}
+
+		return inst; 
+	}
+	
     public void StartBattle() { EnemyData s = EnemyData.GetFixedDataByID(1); if (s != null) dataContainer.enemyData = new EnemyBattleData(s); if (CardManager.Instance != null) { dataContainer.playerData.deck.Clear(); dataContainer.playerData.hand.Clear(); dataContainer.playerData.discardPile.Clear(); dataContainer.playerData.deck.AddRange(CardManager.Instance.mainDeckCardIDs); ShuffleDeckIDs(); } DrawCards(5); StartPlayerTurn(); }
     private void StartPlayerTurn() { isPlayerTurn = true; currentTurnCount++; if (currentTurnCount > 1) { int r = 5 - dataContainer.playerData.hand.Count; if (r > 0) DrawCards(r); if (dataContainer.playerData.hand.Count < MAX_HAND_SIZE) DrawCards(1); } UpdateUI(); }
     private void EndTurn() { isPlayerTurn = false; selectedCards.Clear(); UpdateUI(); StartCoroutine(EnemyTurnCoroutine()); }

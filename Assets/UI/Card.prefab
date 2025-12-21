@@ -310,6 +310,7 @@ MonoBehaviour:
   numberText: {fileID: 2868370687574048105}
   nameText: {fileID: 5106033308798629487}
   effectText: {fileID: 5297497530401905933}
+  cardDetailPrefab: {fileID: 3826272908079802373, guid: c48180bae3152cf4f8d91cd9cc9fd4ac, type: 3}
 --- !u!225 &2959850907482162623
 CanvasGroup:
   m_ObjectHideFlags: 0

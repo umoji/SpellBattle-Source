@@ -11,16 +11,7 @@ public class DamageTextController : MonoBehaviour
     public float moveSpeed = 100.0f;        
     public float disappearTime = 0.8f;      
     public float animationDuration = 1.2f;  
-    public float fadeSpeed = 3.0f;          
-
-    [Header("Random Direction")]
-    public float maxRandomX = 0.5f;         
-    private Vector3 randomDirection;         
-
-    [Header("Random Position Offset")]
-    public float maxPositionXOffset = 0f; 
-    public float maxPositionYOffset = 0f; 
-
+    
     [Header("Scaling")]
     public float scaleUpDuration = 0.1f;    
     public float maxScale = 1.2f;
@@ -29,73 +20,61 @@ public class DamageTextController : MonoBehaviour
     public bool autoDestroy = true; 
 
     private float timer;
-    private Color startColor;
 
-    // ★追加：BattleManagerから呼び出されるダメージ設定用関数
     public void SetDamageValue(int damage)
     {
         if (textComponent == null) textComponent = GetComponent<TextMeshProUGUI>();
-        
-        if (textComponent != null)
-        {
-            textComponent.text = damage.ToString();
-        }
+        if (textComponent != null) textComponent.text = damage.ToString();
     }
 
     void Awake()
     {
         if (textComponent == null) textComponent = GetComponent<TextMeshProUGUI>();
-        if (textComponent != null) startColor = textComponent.color;
         timer = 0f;
-
-        float randomX = Random.Range(-maxRandomX, maxRandomX);
-        randomDirection = (Vector3.up * 1f + new Vector3(randomX, 0f, 0f)).normalized;
     }
 
-    void Start()
-    {
-        StartCoroutine(ScaleAnimation());
-        
-        if (autoDestroy)
-        {
-            StartCoroutine(DelayedDestroy());
-        }
-    }
-
-    // スケールアニメーションのコルーチン（元のコードに必要と思われるため追加）
-	private IEnumerator ScaleAnimation()
+	void Start()
 	{
-		// 開始時のサイズを 0 にして、消えている状態からスタート
-		Vector3 originalScale = transform.localScale;
-		transform.localScale = Vector3.zero; 
-
-		float t = 0;
-		// scaleUpDuration（0.1秒くらい）で一気に大きくする
-		while (t < scaleUpDuration)
+		StartCoroutine(ScaleAnimation());
+		
+		// ★修正：フラグをチェックして、外部管理(false)の時は勝手に消えないようにする
+		if (autoDestroy) 
 		{
-			t += Time.deltaTime;
-			// 少し目標サイズ（maxScale）を通り過ぎてから戻るような動きにすると「シュパッ」と見えます
-			float progress = t / scaleUpDuration;
-			transform.localScale = Vector3.Lerp(Vector3.zero, originalScale * maxScale, progress);
-			yield return null;
+			StartCoroutine(DelayedDestroy());
 		}
-		// 最後に本来のサイズにピタッと合わせる
-		transform.localScale = originalScale;
 	}
 
-    private IEnumerator DelayedDestroy()
+    private IEnumerator ScaleAnimation()
     {
-        yield return new WaitForSeconds(disappearTime);
-        yield return FadeAndDestroyRoutine();
+        Vector3 originalScale = Vector3.one;
+        transform.localScale = Vector3.zero; 
+        float t = 0;
+        while (t < scaleUpDuration)
+        {
+            t += Time.deltaTime;
+            float progress = t / scaleUpDuration;
+            transform.localScale = Vector3.Lerp(Vector3.zero, originalScale * maxScale, progress);
+            yield return null;
+        }
+        transform.localScale = originalScale;
     }
 
-    void Update()
-    {
-        timer += Time.deltaTime;
-        float progress = Mathf.Min(timer / animationDuration, 1f); 
-        float currentSpeedFactor = 1f - progress; 
-        transform.localPosition += randomDirection * moveSpeed * currentSpeedFactor * Time.deltaTime;
-    }
+	private IEnumerator DelayedDestroy()
+	{
+		// autoDestroy が true の時だけ呼ばれるタイマー
+		yield return new WaitForSeconds(disappearTime);
+		yield return FadeAndDestroyRoutine();
+	}
+
+	void Update()
+	{
+		// 移動だけを管理。ここには Destroy や Fade の処理は含めない
+		timer += Time.deltaTime;
+		float progress = Mathf.Min(timer / animationDuration, 1f);
+		float currentSpeedFactor = 1f - progress;
+
+		transform.localPosition += Vector3.up * moveSpeed * currentSpeedFactor * Time.deltaTime;
+	}
 
     public void DestroyWithFade()
     {
@@ -107,7 +86,6 @@ public class DamageTextController : MonoBehaviour
     {
         float t = 0;
         if (textComponent == null) yield break;
-        
         Color c = textComponent.color;
         while (t < 0.3f) 
         {
@@ -116,7 +94,7 @@ public class DamageTextController : MonoBehaviour
             textComponent.color = c;
             yield return null;
         }
-        
+        // 親（Canvas付きPrefabの場合）ごと消す
         if (transform.parent != null) Destroy(transform.parent.gameObject);
         else Destroy(gameObject);
     }

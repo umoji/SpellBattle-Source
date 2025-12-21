@@ -153,13 +153,9 @@ MonoBehaviour:
   moveSpeed: 1
   disappearTime: 1
   animationDuration: 1.2
-  fadeSpeed: 3
-  maxRandomX: 0.5
-  maxPositionXOffset: 0
-  maxPositionYOffset: 0
   scaleUpDuration: 0.1
   maxScale: 1.2
-  autoDestroy: 1
+  autoDestroy: 0
 --- !u!1 &8895185817432702868
 GameObject:
   m_ObjectHideFlags: 0

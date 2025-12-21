@@ -6,28 +6,24 @@ using System.Collections.Generic;
 
 public class SceneLoader : MonoBehaviour
 {
-    // ★★★ シングルトンインスタンス ★★★
     public static SceneLoader Instance { get; private set; }
 
-    // HomeSceneでボタンを動的検索するために使用する定数名
     private const string BATTLE_BUTTON_NAME = "StageButton";     
     private const string INVENTORY_BUTTON_NAME = "InventoryButton";
-    
-    // InventoryScene内のHOMEボタンのGameObject名を "HomeButton" に設定
     private const string INVENTORY_HOME_BUTTON_NAME = "HomeButton"; 
-    
-    // ★修正点★: GachaButton関連の定数は HomeUIController に移譲するため削除
     
     private const string HOME_SCENE_NAME = "HomeScene";
     private const string BATTLE_SCENE_NAME = "BattleScene";
     private const string INVENTORY_SCENE_NAME = "InventoryScene"; 
+
+    // ★追加: 二重ロードを防ぐためのフラグ
+    private bool isLoading = false;
 
     void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
-            // シーンをまたいでも破棄されないようにする
             DontDestroyOnLoad(gameObject); 
         }
         else
@@ -38,38 +34,28 @@ public class SceneLoader : MonoBehaviour
 
     void Start()
     {
-        // シーンがロードされたときにイベントを購読
         SceneManager.sceneLoaded += OnSceneLoaded;
-        
-        // 最初のシーン（HomeSceneであると仮定）のイベントをセットアップ
         SetupSceneButtons(SceneManager.GetActiveScene());
     }
 
     void OnDestroy()
     {
-        // オブジェクトが破棄される前にイベントの購読を解除
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    /// <summary>
-    /// シーンロード完了時に呼ばれるコールバック
-    /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // 常にボタンを再セットアップ
+        // ロード完了したのでフラグを下ろす
+        isLoading = false;
         SetupSceneButtons(scene);
     }
 
-    /// <summary>
-    /// 各シーンのボタンイベントをコードで動的に割り当てます。
-    /// </summary>
     private void SetupSceneButtons(Scene scene)
     {
         if (scene.name == HOME_SCENE_NAME)
         {
-            Debug.Log("HomeScene loaded. Attempting to re-initialize buttons dynamically.");
+            Debug.Log("HomeScene loaded. Re-initializing buttons.");
 
-            // 1. BattleSceneへのボタン（StageButton）の検索と再登録
             GameObject stageButtonObj = GameObject.Find(BATTLE_BUTTON_NAME);
             if (stageButtonObj != null)
             {
@@ -78,15 +64,9 @@ public class SceneLoader : MonoBehaviour
                 {
                     stageButton.onClick.RemoveAllListeners(); 
                     stageButton.onClick.AddListener(LoadBattleScene); 
-                    Debug.Log($"{BATTLE_BUTTON_NAME} event re-initialized.");
                 }
             }
-            else
-            {
-                Debug.LogError($"CRITICAL: {BATTLE_BUTTON_NAME} GameObject not found in HomeScene. Check name.");
-            }
             
-            // 2. InventorySceneへのボタン（InventoryButton）の検索と再登録
             GameObject inventoryButtonObj = GameObject.Find(INVENTORY_BUTTON_NAME);
             if (inventoryButtonObj != null)
             {
@@ -95,49 +75,21 @@ public class SceneLoader : MonoBehaviour
                 {
                     inventoryButton.onClick.RemoveAllListeners(); 
                     inventoryButton.onClick.AddListener(LoadInventoryScene); 
-                    Debug.Log($"{INVENTORY_BUTTON_NAME} event re-initialized.");
                 }
             }
-            else
-            {
-                Debug.LogError($"CRITICAL: {INVENTORY_BUTTON_NAME} GameObject not found in HomeScene. Check name.");
-            }
-            
-            // ★修正点★: GachaButtonのイベント登録は HomeUIController に移譲するため、ここにはロジックを追加しない。
         }
-        
-        // InventorySceneのHomeボタン設定ロジック
         else if (scene.name == INVENTORY_SCENE_NAME) 
         {
-            Debug.Log("InventoryScene loaded. Setting up Home button listener.");
-            
-            // Homeボタンを検索し、HomeSceneへの遷移を設定
             GameObject homeButtonObj = GameObject.Find(INVENTORY_HOME_BUTTON_NAME);
-            
             if (homeButtonObj != null)
             {
                 Button homeButton = homeButtonObj.GetComponent<Button>();
                 if (homeButton != null)
                 {
                     homeButton.onClick.RemoveAllListeners();
-                    homeButton.onClick.AddListener(LoadHomeScene); // LoadHomeSceneを設定
-                    Debug.Log($"{INVENTORY_HOME_BUTTON_NAME} event re-initialized successfully.");
-                }
-                else
-                {
-                    Debug.LogError($"Inventory Home Button found, but Button component is missing on: {INVENTORY_HOME_BUTTON_NAME}.");
+                    homeButton.onClick.AddListener(LoadHomeScene); 
                 }
             }
-            else
-            {
-                Debug.LogError($"CRITICAL: Inventory Scene Home Button ('{INVENTORY_HOME_BUTTON_NAME}') not found. Check GameObject name in Hierarchy.");
-            }
-        }
-        
-        // バトルシーンに入ったとき、古いHomeSceneのボタン参照をクリア (メモリ管理のため)
-        else if (scene.name == BATTLE_SCENE_NAME)
-        {
-             Debug.Log("Entered BattleScene. Clearing Home button references.");
         }
     }
 
@@ -145,25 +97,17 @@ public class SceneLoader : MonoBehaviour
     // シーン遷移メソッド
     // -------------------------------------------------------------------
 
-    public void LoadHomeScene()
+    public void LoadHomeScene() => SafeLoadScene(HOME_SCENE_NAME);
+    public void LoadBattleScene() => SafeLoadScene(BATTLE_SCENE_NAME);
+    public void LoadInventoryScene() => SafeLoadScene(INVENTORY_SCENE_NAME);
+
+    // ★安全にロードを開始するための共通メソッド
+    private void SafeLoadScene(string sceneName)
     {
-        Debug.Log("Loading Home Scene...");
-        StartCoroutine(LoadSceneAsync(HOME_SCENE_NAME)); 
+        if (isLoading) return; // すでにロード中なら無視
+        StartCoroutine(LoadSceneAsync(sceneName));
     }
 
-    public void LoadBattleScene()
-    {
-        Debug.Log("Loading Battle Scene...");
-        StartCoroutine(LoadSceneAsync(BATTLE_SCENE_NAME));
-    }
-    
-    public void LoadInventoryScene()
-    {
-        Debug.Log("Loading Inventory Scene...");
-        StartCoroutine(LoadSceneAsync(INVENTORY_SCENE_NAME));
-    }
-
-    // 非同期ロードのコルーチン
     private IEnumerator LoadSceneAsync(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName))
@@ -172,13 +116,25 @@ public class SceneLoader : MonoBehaviour
             yield break;
         }
 
+        isLoading = true; // ロード開始フラグ
+        Debug.Log($"Starting Async Load: {sceneName}");
+
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
 
+        // ★asyncLoadがNullでないことを確認
+        if (asyncLoad == null)
+        {
+            Debug.LogError($"Failed to start LoadSceneAsync for {sceneName}");
+            isLoading = false;
+            yield break;
+        }
+
+        // ロード完了まで待機
         while (!asyncLoad.isDone)
         {
             yield return null;
         }
         
-        Debug.Log($"Scene '{sceneName}' loaded successfully.");
+        Debug.Log($"Scene '{sceneName}' load process finished.");
     }
 }
